@@ -1,0 +1,7 @@
+
+
+# Copy over to spark2 and spark3
+rsync -av --exclude "part?.a?" --delete-excluded * spark2:~/spark_blast/ProofOfConcept/
+rsync -av --exclude "part?.a?" --delete-excluded * spark3:~/spark_blast/ProofOfConcept/
+
+$SPARK_HOME/bin/spark-submit --name "spark_blast" --master spark://spark1:7077 /root/spark_blast/ProofOfConcept/spark_blast.py
