@@ -22,7 +22,8 @@ while read LINE; do
         swift -q download $Container ${array[$i]}
     done
 
-    ./blastn -db $Database -max_target_seqs 1 \
+    ./blastn -db $Database $OPTIONS \
+        -num_threads $THREADS \
         -outfmt "10 qseqid pident length mismatch gapopen qstart qend sstart ssend evalue bitscore stitle" \
         < $QueryFile
 done

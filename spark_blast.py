@@ -11,7 +11,7 @@ import swiftclient
     |_|                  |_____|
 '''
 
-def main(ST_AUTH, ST_USER, ST_KEY, TASKS, QUERY_FILE, MODE, OBJECT_STORES):
+def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, QUERY_FILE, MODE, OBJECT_STORES):
     # Set the context
     conf = SparkConf() # .setAppName("spark_blast").setMaster(master)
     conf.setExecutorEnv(key='Auth', value='value', pairs=None)
@@ -31,7 +31,7 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, QUERY_FILE, MODE, OBJECT_STORES):
     Query_File = os.path.basename(QUERY_FILE)
 
     # this will be our root name for our DB names
-    container = "blastdb_" + ",".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
+    container = "blastdb_" + "-".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
 
     # log into swift
     conn = swiftclient.Connection(user=ST_USER, key=ST_KEY, authurl=ST_AUTH)
@@ -58,9 +58,15 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, QUERY_FILE, MODE, OBJECT_STORES):
     # Distribute our data
     distData = sc.parallelize(files, TASKS)
 
+    # Set our search options
+    if MODE == "1":
+        options = "-max_target_seqs 1"
+    # elif MODE == "2":
+    #     options = ??
+
     # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
     # this doesn't appear to be available in ver 2.1.1
-    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY})
+    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY, 'THREADS': str(CORES), 'OPTIONS': options})
 
     # Now let the bash script do its work.  This will run blast using our query file across all the
     # DB partitions searching for matching genomic reads.
@@ -77,6 +83,10 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, QUERY_FILE, MODE, OBJECT_STORES):
 
     # More code here
 
+def usage():
+    print("Usage: <fasta file to query> <search mode [1|2]> <object container[s] used to build blast databases>")
+    print("       search mode 1: find top hit for each line in file, or")
+    print("                   2: find top references|organisms referenced in query file")
 
 if __name__ == '__main__':
 
@@ -85,10 +95,12 @@ if __name__ == '__main__':
     ST_USER = os.getenv('ST_USER')
     ST_KEY = os.getenv('ST_KEY')
     TASKS = os.getenv('TASKS_TO_USE')
+    CORES = os.getenv('CORES_TO_USE')
 
     if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
         print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
-        print("Please set these values object store before running")
+        print("Please set these values object store before running\n")
+        usage()
         exit()
 
     try:
@@ -102,10 +114,16 @@ if __name__ == '__main__':
         MODE = sys.argv[2]
         OBJECT_STORES = sys.argv[3:]
 
-        # Run
-        main(ST_AUTH, ST_USER, ST_KEY, TASKS, QUERY_FILE, MODE, OBJECT_STORES)
+        if CORES is None:
+            CORES = 1
+
+        if MODE not in ('1', '2'):
+            print("search mode is not 1 or 2\n")
+            usage()
+
+        else:
+            # Run
+            main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, QUERY_FILE, MODE, OBJECT_STORES)
 
     else:
-        print("Usage: <fasta file to query> <search mode [1|2]> <object container[s] used to build blast databases>")
-        print("       search mode 1: find top hit for each line in file, or")
-        print("                   2: find top references|organisms referenced in query file")
+        usage()
