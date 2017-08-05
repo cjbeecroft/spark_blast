@@ -30,7 +30,7 @@ export ST_AUTH="https://sjc01.objectstorage.softlayer.net/auth/v1.0"
 
 export MASTER="spark://spark1.w251.sftlyr.ws:7077"
 
-# Set the shard factor to cluster size - 1.  This assumes
+# Set the partition factor to cluster size - 1.  This assumes
 # that .../conf/slaves has no extra lines
 SLAVES=`wc -l $SPARK_HOME/conf/slaves | cut -d" " -f1`
 export TASKS_TO_USE=$(($SLAVES - 1))

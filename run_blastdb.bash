@@ -15,7 +15,7 @@ echo ST_USER: $ST_USER
 echo ST_KEY: $ST_KEY
 echo ST_AUTH: $ST_AUTH
 
-echo Shard factor: $TASKS_TO_USE
+echo DB partition factor: $TASKS_TO_USE
 echo Genomic collections to use: $@
 
 # Run

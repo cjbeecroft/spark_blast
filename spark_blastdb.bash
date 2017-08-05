@@ -51,7 +51,7 @@ echo Generating BlastDB $OutFile on `uname -n`
 while read LINE; do
     curl -H "X-Auth-Token: $OS_AUTH_TOKEN" $OS_STORAGE_URL/$LINE
 done
-) | zcat | ./makeblastdb -dbtype nucl -title shard_$OutFile -out $OutFile
+) | zcat | ./makeblastdb -dbtype nucl -title part_$OutFile -out $OutFile
 
 # Upload the files to swift
 for var in $OutFile*; do

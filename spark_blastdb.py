@@ -27,20 +27,20 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, OBJECT_STORES):
     sc.addFile(ShellScript)
 
     # this will be our root name for our DB names
-    DBs = "blastdb_" + ",".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
+    container = "blastdb_" + ",".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
 
     # log into swift
     conn = swiftclient.Connection(user=ST_USER, key=ST_KEY, authurl=ST_AUTH)
 
     # Create the continer for our results if it does not exist
-    if DBs not in [t['name'] for t in conn.get_account()[1]]:
-        print("Creating container " + DBs + " to contain our blast dbs")
-        conn.put_container(DBs)
+    if container not in [t['name'] for t in conn.get_account()[1]]:
+        print("Creating container " + container + " to contain our blast dbs")
+        conn.put_container(container)
     else:
         # Container already existed, remove any contents
-        print("Container " + DBs + " already exists, removing contents")
-        for data in conn.get_container(DBs)[1]:
-            conn.delete_object(DBs, data['name'])
+        print("Container " + container + " already exists, removing contents")
+        for data in conn.get_container(container)[1]:
+            conn.delete_object(container, data['name'])
 
     # Get the list of objects we are oing to need
     files = []
@@ -54,14 +54,14 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, OBJECT_STORES):
 
     # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
     # this doesn't appear to be available in ver 2.1.1
-    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY, 'DBs': DBs})
+    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY, 'DBs': container})
 
     # Now let the bash script do its work.  This will assemble and store the results of all the list of
     # fna files collected from each Object Store
     # 
     # It has done its work--I toss it carelessly to fall where it may
     #   -- Walt Whitman: Leaves of Grass, Book 4 - Children of Adam, Spontaneous Me
-    print("Starting to create %d blast database 'shards'" % TASKS)
+    print("Starting to create %d blast database 'partitions'" % TASKS)
     for line in pipeRDD.collect():
         print(line)
 
