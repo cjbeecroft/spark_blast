@@ -1,11 +1,13 @@
 #!/usr/bin/bash
 
-#  ____                   _    ____  _           _   ____  ____
-# / ___| _ __   __ _ _ __| | _| __ )| | __ _ ___| |_|  _ \| __ )
-# \___ \| '_ \ / _` | '__| |/ /  _ \| |/ _` / __| __| | | |  _ \
-#  ___) | |_) | (_| | |  |   <| |_) | | (_| \__ \ |_| |_| | |_) |
-# |____/| .__/ \__,_|_|  |_|\_\____/|_|\__,_|___/\__|____/|____/
-#       |_|
+######################################################################
+#                       _        _     _           _      _ _
+#  ___ _ __   __ _ _ __| | __   | |__ | | __ _ ___| |_ __| | |__
+# / __| '_ \ / _` | '__| |/ /   | '_ \| |/ _` / __| __/ _` | '_ \
+# \__ \ |_) | (_| | |  |   <    | |_) | | (_| \__ \ || (_| | |_) |
+# |___/ .__/ \__,_|_|  |_|\_\___|_.__/|_|\__,_|___/\__\__,_|_.__/
+#     |_|                  |_____|
+######################################################################
 
 # ST_KEY, ST_AUTH, ST_USER should be in the environment
 
@@ -47,13 +49,11 @@ echo Generating BlastDB $OutFile on `uname -n`
 #   -- Walt Whitman - Leaves of Grass: Book 15, Proud music of the storm
 (
 while read LINE; do
-
-   curl -H "X-Auth-Token: $OS_AUTH_TOKEN" $OS_STORAGE_URL/$LINE
-
+    curl -H "X-Auth-Token: $OS_AUTH_TOKEN" $OS_STORAGE_URL/$LINE
 done
 ) | zcat | ./makeblastdb -dbtype nucl -title shard_$OutFile -out $OutFile
 
-#  Upload the files to swift
+# Upload the files to swift
 for var in $OutFile*; do
     swift upload $DBs $var
     /bin/rm $var

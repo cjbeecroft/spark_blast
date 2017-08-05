@@ -4,14 +4,14 @@ from pyspark import SparkContext, SparkConf
 import swiftclient
 
 '''                   _        _     _           _      _ _
- ___ _ __   __ _ _ __| | __   | |__ | | __ _ ___| |_ __| | |__   _ __  _   _
-/ __| '_ \ / _` | '__| |/ /   | '_ \| |/ _` / __| __/ _` | '_ \ | '_ \| | | |
-\__ \ |_) | (_| | |  |   <    | |_) | | (_| \__ \ || (_| | |_) || |_) | |_| |
-|___/ .__/ \__,_|_|  |_|\_\___|_.__/|_|\__,_|___/\__\__,_|_.__(_) .__/ \__, |
-    |_|                  |_____|                                |_|    |___/
+ ___ _ __   __ _ _ __| | __   | |__ | | __ _ ___| |_ __| | |__
+/ __| '_ \ / _` | '__| |/ /   | '_ \| |/ _` / __| __/ _` | '_ \
+\__ \ |_) | (_| | |  |   <    | |_) | | (_| \__ \ || (_| | |_) |
+|___/ .__/ \__,_|_|  |_|\_\___|_.__/|_|\__,_|___/\__\__,_|_.__/
+    |_|                  |_____|
 '''
 
-def main(ST_AUTH, ST_USER, ST_KEY, SHARDS, OBJECT_STORES):
+def main(ST_AUTH, ST_USER, ST_KEY, TASKS, OBJECT_STORES):
     # Set the context
     conf = SparkConf() # .setAppName("spark_blast").setMaster(master)
     conf.setExecutorEnv(key='Auth', value='value', pairs=None)
@@ -22,12 +22,12 @@ def main(ST_AUTH, ST_USER, ST_KEY, SHARDS, OBJECT_STORES):
 
     # Set our spark database creation script and add all the files that are needed to be on the
     # remote hosts to the shall script
-    ShellScript = "SparkBlastDB.bash"
+    ShellScript = "spark_blastdb.bash"
     sc.addFile("makeblastdb")
     sc.addFile(ShellScript)
 
     # this will be our root name for our DB names
-    DBs = "blastdb_" + ",".join(sorted(OBJECT_STORES)) + "_" + str(SHARDS)
+    DBs = "blastdb_" + ",".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
 
     # log into swift
     conn = swiftclient.Connection(user=ST_USER, key=ST_KEY, authurl=ST_AUTH)
@@ -50,17 +50,18 @@ def main(ST_AUTH, ST_USER, ST_KEY, SHARDS, OBJECT_STORES):
             files.append("%s/%s" % (container, data['name']))
 
     # Distribute our data
-    distData = sc.parallelize(files, SHARDS)
+    distData = sc.parallelize(files, TASKS)
 
-    # Pass our bash script our parameters, spark is grumpy with an integer, so convert SHARDS to a string
-    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY, 'SHARDS': str(SHARDS), 'DBs': DBs})
+    # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
+    # this doesn't appear to be available in ver 2.1.1
+    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY, 'DBs': DBs})
 
     # Now let the bash script do its work.  This will assemble and store the results of all the list of
     # fna files collected from each Object Store
     # 
     # It has done its work--I toss it carelessly to fall where it may
     #   -- Walt Whitman: Leaves of Grass, Book 4 - Children of Adam, Spontaneous Me
-    print("Starting to create %d blast database 'shards'" % SHARDS)
+    print("Starting to create %d blast database 'shards'" % TASKS)
     for line in pipeRDD.collect():
         print(line)
 
@@ -73,28 +74,23 @@ if __name__ == '__main__':
     ST_AUTH = os.getenv('ST_AUTH')
     ST_USER = os.getenv('ST_USER')
     ST_KEY = os.getenv('ST_KEY')
+    TASKS = os.getenv('TASKS_TO_USE')
 
-    if ST_AUTH is None or ST_USER is None or ST_KEY is None:
-        print("Environment does not contain ST_AUTH or ST_USER or ST_KEY")
+    if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
+        print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
         print("Please set these values object store before running")
         exit()
 
+    try:
+        TASKS = int(TASKS)
+    except:
+        print("TASKS_TO_USE is not defined as an integer")
+        exit()
+
     if len(sys.argv) > 1:
-        # Get the list of shards we are going to create
-        try:
-            SHARDS = int(sys.argv[1])
-        except:
-            print("Argument 1 (number of database shards to create) is not an integer")
+        OBJECT_STORES = sys.argv[1:]
 
-        # Get the list of containers we should look at
-        if len(sys.argv) > 2:
-            OBJECT_STORES = sys.argv[2:]
-
-            # Run
-            main(ST_AUTH, ST_USER, ST_KEY, SHARDS, OBJECT_STORES)
-        else:
-            print("No object containers listed, please provide a list of object containers containing fna files")
-
+        # Run
+        main(ST_AUTH, ST_USER, ST_KEY, TASKS, OBJECT_STORES)
     else:
-        print("Argument 1 (number of database shards to create) is not provided")
-        print("Usage: Shards object_store_to_use [object_store_to_user ...]")
+        print("No object containers listed, please provide a list of object containers containing fna files")
