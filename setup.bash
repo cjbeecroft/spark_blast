@@ -16,7 +16,7 @@
 # Set the swift object store credentials
 export ST_USER="SLO..."
 export ST_KEY="748..."
-export ST_AUTH="https://sjc01.objectstorage.softlayer.net/auth/v1.0"
+export ST_AUTH="https://sjc01.objectstorage.service.networklayer.com/auth/v1.0"
 
 
 ######################################################################
@@ -48,3 +48,4 @@ export TASKS_TO_USE=$(($SLAVES - 1))
 # This will set the number of cores blast will use along
 # with telling spark each task needs this many cores
 export CORES_TO_USE=2
+export MAX_FILE_SIZE=2GB

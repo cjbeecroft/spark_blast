@@ -30,6 +30,7 @@ fi
 eval `swift auth`
 
 # Assign a random number to make sure we have a unique name
+# across all of the workers
 OutFile=blast_db_$RANDOM"_"$RANDOM
 
 # Pass back a status
@@ -51,10 +52,7 @@ echo Generating BlastDB $OutFile on `uname -n`
 while read LINE; do
     curl -H "X-Auth-Token: $OS_AUTH_TOKEN" $OS_STORAGE_URL/$LINE
 done
-) | zcat | ./makeblastdb -dbtype nucl -title part_$OutFile -out $OutFile
+) | zcat | ./makeblastdb -dbtype nucl -title part_$OutFile -out $OutFile -max_file_sz ${MAX_FILE_SIZE:-1GB}
 
 # Upload the files to swift
-for var in $OutFile*; do
-    swift upload $DBs $var
-    /bin/rm $var
-done
+swift upload $DBs $OutFile*

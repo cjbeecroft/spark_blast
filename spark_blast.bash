@@ -15,12 +15,8 @@ while read LINE; do
     Container=${array[1]}
     Database=${array[2]}
     
-    files=${#array[@]}
-
     # Download the database files from the object store
-    for (( i=3; i<${#array[@]}; i++ )); do
-        swift -q download $Container ${array[$i]}
-    done
+    swift -q download $Container ${array[@]:3}
 
     ./blastn -db $Database $OPTIONS \
         -num_threads $THREADS \
