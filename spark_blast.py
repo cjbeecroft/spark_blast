@@ -45,7 +45,7 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, QUERY_FILE, MODE, OBJECT_STORES
     dbs = {}
     print("Collecting DBs from " + container)
     for data in conn.get_container(container)[1]:
-        (base, ext) = data['name'].split('.')
+        base = data['name'].split('.', 1)[0]
         if base not in dbs:
             dbs[base] = []
         dbs[base].append(data['name'])
