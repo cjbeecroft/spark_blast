@@ -11,9 +11,21 @@ import swiftclient
     |_|                  |_____|
 '''
 
+
 def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES):
+    ''' Main function
+        ST_AUTH - Object storage auth string where fna containers are found
+        ST_USER - Ojbect storage user token
+        ST_KEY - Ojbect storage secret token
+        TASKS - Number of tasks to launch, db partition factor
+        CORES - Number of cores to devote to each task
+        BLASTN - Location of blastn executable
+        QUERY_FILE - fasta query file
+        MODE - operation mode, 1 = top search, 2 = most commong genome
+        OBJECT_STORES - list of source containers that built the blast db
+    '''
     # Set the context
-    conf = SparkConf() # .setAppName("spark_blast").setMaster(master)
+    conf = SparkConf()
     conf.setExecutorEnv(key='Auth', value='value', pairs=None)
     sc = SparkContext(conf=conf)
 
@@ -29,7 +41,6 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
     # Copy over blastn if it is local
     if os.path.dirname(BLASTN) == "." or os.path.dirname(BLASTN) == "":
         sc.addFile(BLASTN)
-
 
     # Get the file name part of QUERY_FILE
     Query_File = os.path.basename(QUERY_FILE)
@@ -75,7 +86,7 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
 
     # Now let the bash script do its work.  This will run blast using our query file across all the
     # DB partitions searching for matching genomic reads.
-    # 
+    #
     # Failing to fetch me at first keep encouraged,
     # Missing me one place search another,
     # I stop somewhere waiting for you.
@@ -88,10 +99,20 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
 
     # More code here
 
+
 def usage():
+    ''' Usage: print home help information '''
     print("Usage: <fasta file to query> <search mode [1|2]> <object container[s] used to build blast databases>")
     print("       search mode 1: find top hit for each line in file, or")
-    print("                   2: find top references|organisms referenced in query file")
+    print("                   2: find top references|organisms referenced in query file\n")
+    print("Envionment variables:")
+    print("       ST_AUTH - Object store auth token URL")
+    print("       ST_USER - Object store user name of account on cluster")
+    print("       ST_KEY - Object store user password of account on cluster")
+    print("       TASKS_TO_USE - The number of workers to devote to the task/number of db partitions to use")
+    print("       CORES_TO_USE - The number of cores each worker should use")
+    print("       BLASTN - The name and location of the blastn program")
+
 
 if __name__ == '__main__':
 

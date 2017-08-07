@@ -12,10 +12,19 @@ import swiftclient
     |_|                  |_____|
 '''
 
+
 def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STORES):
+    ''' Main function
+        ST_AUTH - Object storage auth string where fna containers are found
+        ST_USER - Ojbect storage user token
+        ST_KEY - Ojbect storage secret token
+        MAX_FILE_SIZE - Maximum file set parameter for makeblastdb
+        TASKS - Number of tasks to launch, db partition factor
+        MAKEBLASTDB - Location of makeblastdb executable
+        OBJECT_STORES - list of source containers that built the blast db
+    '''
     # Set the context
-    conf = SparkConf() # .setAppName("spark_blast").setMaster(master)
-    conf.setExecutorEnv(key='Auth', value='value', pairs=None)
+    conf = SparkConf()
     sc = SparkContext(conf=conf)
 
     # Quiet the logs
@@ -69,7 +78,7 @@ def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STO
 
     # Now let the bash script do its work.  This will assemble and store the results of all the list of
     # fna files collected from each Object Store
-    # 
+    #
     # It has done its work--I toss it carelessly to fall where it may
     #   -- Walt Whitman: Leaves of Grass, Book 4 - Children of Adam, Spontaneous Me
     print("Starting to create %d blast database 'partitions'" % TASKS)
@@ -77,6 +86,18 @@ def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STO
         print(line)
 
     print("Complete")
+
+
+def usage():
+    ''' Usage: print home help information '''
+    print("Usage: <object container[s] used to build blast databases>")
+    print("Envionment variables:")
+    print("       ST_AUTH - Object store auth token URL")
+    print("       ST_USER - Object store user name of account on cluster")
+    print("       ST_KEY - Object store user password of account on cluster")
+    print("       TASKS_TO_USE - The number of workers to devote to the task/number of db partitions to use")
+    print("       MAX_FILE_SIZE - The maximum file size parameter to makeblastdb")
+    print("       MAKEBLASTDB - The name and location of the blastn program, defaults to './makeblastdb'")
 
 
 if __name__ == '__main__':
@@ -93,16 +114,19 @@ if __name__ == '__main__':
     if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
         print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
         print("Please set these values object store before running")
+        usage()
         exit()
 
     if not os.path.exists(MAKEBLASTDB):
         print("MAKEBLASTDB env variable not set or makeblastdb not in current directory")
+        usage()
         exit()
 
     try:
         TASKS = int(TASKS)
     except:
         print("TASKS_TO_USE is not defined as an integer")
+        usage()
         exit()
 
     if len(sys.argv) > 1:
@@ -112,3 +136,4 @@ if __name__ == '__main__':
         main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STORES)
     else:
         print("No object containers listed, please provide a list of object containers containing fna files")
+        usage()
