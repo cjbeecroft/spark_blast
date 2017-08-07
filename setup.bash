@@ -49,3 +49,8 @@ export TASKS_TO_USE=$(($SLAVES - 1))
 # with telling spark each task needs this many cores
 export CORES_TO_USE=2
 export MAX_FILE_SIZE=2GB
+
+# Location of blastn and makeblastdb that is accesible to all nodes
+# setting these will prevent blast from being copied over
+#export BLASTN=
+#export MAKEBLASTDB=

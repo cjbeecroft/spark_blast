@@ -50,9 +50,20 @@ echo Generating BlastDB $OutFile on `uname -n`
 #   -- Walt Whitman - Leaves of Grass: Book 15, Proud music of the storm
 (
 while read LINE; do
-    curl -H "X-Auth-Token: $OS_AUTH_TOKEN" $OS_STORAGE_URL/$LINE
+    curl -s -H "X-Auth-Token: $OS_AUTH_TOKEN" $OS_STORAGE_URL/$LINE
 done
-) | zcat | ./makeblastdb -dbtype nucl -title part_$OutFile -out $OutFile -max_file_sz ${MAX_FILE_SIZE:-1GB}
+) | zcat | $MAKEBLASTDB -dbtype nucl -title part_$OutFile -out $OutFile -max_file_sz ${MAX_FILE_SIZE:-1GB}
 
 # Upload the files to swift
 swift upload $DBs $OutFile*
+
+# Remove our output
+/bin/rm -rf $OutFile*
+
+# And we don't need blast if we've copied it, e.g., it is a local file
+if [ `dirname $MAKEBLASTDB` == "." ] ; then
+    /bin/rm -rf $MAKEBLASTDB
+fi
+
+
+

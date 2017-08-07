@@ -12,7 +12,7 @@ import swiftclient
     |_|                  |_____|
 '''
 
-def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, OBJECT_STORES):
+def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STORES):
     # Set the context
     conf = SparkConf() # .setAppName("spark_blast").setMaster(master)
     conf.setExecutorEnv(key='Auth', value='value', pairs=None)
@@ -24,8 +24,11 @@ def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, OBJECT_STORES):
     # Set our spark database creation script and add all the files that are needed to be on the
     # remote hosts to the shall script
     ShellScript = "spark_blastdb.bash"
-    sc.addFile("makeblastdb")
     sc.addFile(ShellScript)
+
+    # Copy over makeblastdb if it is local
+    if os.path.dirname(MAKEBLASTDB) == "." or os.path.dirname(MAKEBLASTDB) == "":
+        sc.addFile(MAKEBLASTDB)
 
     # this will be our root name for our DB names
     db_container = "blastdb_" + "-".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
@@ -61,7 +64,8 @@ def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, OBJECT_STORES):
 
     # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
     # this doesn't appear to be available in ver 2.1.1
-    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY, 'DBs': db_container, 'MAX_FILE_SIZE': MAX_FILE_SIZE})
+    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY,
+                                          'DBs': db_container, 'MAX_FILE_SIZE': MAX_FILE_SIZE, 'MAKEBLASTDB': MAKEBLASTDB})
 
     # Now let the bash script do its work.  This will assemble and store the results of all the list of
     # fna files collected from each Object Store
@@ -83,10 +87,16 @@ if __name__ == '__main__':
     ST_KEY = os.getenv('ST_KEY')
     TASKS = os.getenv('TASKS_TO_USE')
     MAX_FILE_SIZE = os.getenv('MAX_FILE_SIZE')
+    # Get the blast program, default to local copy of makeblastdb
+    MAKEBLASTDB = os.getenv('MAKEBLASTDB', './makeblastdb')
 
     if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
         print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
         print("Please set these values object store before running")
+        exit()
+
+    if not os.path.exists(MAKEBLASTDB):
+        print("MAKEBLASTDB env variable not set or makeblastdb not in current directory")
         exit()
 
     try:
@@ -99,6 +109,6 @@ if __name__ == '__main__':
         OBJECT_STORES = sys.argv[1:]
 
         # Run
-        main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, OBJECT_STORES)
+        main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STORES)
     else:
         print("No object containers listed, please provide a list of object containers containing fna files")

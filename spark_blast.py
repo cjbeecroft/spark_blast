@@ -11,7 +11,7 @@ import swiftclient
     |_|                  |_____|
 '''
 
-def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, QUERY_FILE, MODE, OBJECT_STORES):
+def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES):
     # Set the context
     conf = SparkConf() # .setAppName("spark_blast").setMaster(master)
     conf.setExecutorEnv(key='Auth', value='value', pairs=None)
@@ -23,9 +23,13 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, QUERY_FILE, MODE, OBJECT_STORES
     # Set our spark database creation script and add all the files that are needed to be on the
     # remote hosts to the shall script
     ShellScript = "spark_blast.bash"
-    sc.addFile("blastn")
     sc.addFile(ShellScript)
     sc.addFile(QUERY_FILE)
+
+    # Copy over blastn if it is local
+    if os.path.dirname(BLASTN) == "." or os.path.dirname(BLASTN) == "":
+        sc.addFile(BLASTN)
+
 
     # Get the file name part of QUERY_FILE
     Query_File = os.path.basename(QUERY_FILE)
@@ -66,7 +70,8 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, QUERY_FILE, MODE, OBJECT_STORES
 
     # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
     # this doesn't appear to be available in ver 2.1.1
-    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY, 'THREADS': str(CORES), 'OPTIONS': options})
+    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY,
+                                          'THREADS': str(CORES), 'OPTIONS': options, 'BLASTN': BLASTN})
 
     # Now let the bash script do its work.  This will run blast using our query file across all the
     # DB partitions searching for matching genomic reads.
@@ -96,11 +101,16 @@ if __name__ == '__main__':
     ST_KEY = os.getenv('ST_KEY')
     TASKS = os.getenv('TASKS_TO_USE')
     CORES = os.getenv('CORES_TO_USE')
+    BLASTN = os.getenv('BLASTN', './blastn')
 
     if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
         print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
         print("Please set these values object store before running\n")
         usage()
+        exit()
+
+    if not os.path.exists(BLASTN):
+        print("BLASTN env variable not set or blastn not in current directory")
         exit()
 
     try:
@@ -123,7 +133,7 @@ if __name__ == '__main__':
 
         else:
             # Run
-            main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, QUERY_FILE, MODE, OBJECT_STORES)
+            main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES)
 
     else:
         usage()

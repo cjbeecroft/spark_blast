@@ -18,8 +18,14 @@ while read LINE; do
     # Download the database files from the object store
     swift -q download $Container ${array[@]:3}
 
-    ./blastn -db $Database $OPTIONS \
+    $BLASTN -db $Database $OPTIONS \
         -num_threads $THREADS \
         -outfmt "10 qseqid pident length mismatch gapopen qstart qend sstart ssend evalue bitscore stitle" \
         < $QueryFile
 done
+
+# And we don't need blast if we've copied it, e.g., it is a local file
+if [ `dirname $BLASTN` == "." ] ; then
+    /bin/rm -rf $BLASTN
+fi
+
