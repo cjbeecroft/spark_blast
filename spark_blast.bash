@@ -18,14 +18,27 @@ while read LINE; do
     # Download the database files from the object store
     swift -q download $Container ${array[@]:3}
 
+    # Run Blast, it will tell us a story about our genomic poems
+
+    #  I see the places of the sagas,
+    #  I see pine-trees and fir-trees torn by northern blasts,
+    #  I see granite bowlders and cliffs, I see green meadows and lakes,
+    #  I see the burial-cairns of Scandinavian warriors,
+    #  I see them raised high with stones by the marge of restless oceans,
+    #      that the dead men's spirits when they wearied of their quiet
+    #      graves might rise up through the mounds and gaze on the tossing
+    #      billows, and be refresh'd by storms, immensity, liberty, action.
+    #         -- Walt Whitman - Leaves of Grass: Book 6, Salut au Monde, verse 7
     $BLASTN -db $Database $OPTIONS \
         -num_threads $THREADS \
         -outfmt "10 qseqid pident length mismatch gapopen qstart qend sstart ssend evalue bitscore stitle" \
         < $QueryFile
+
+    # remove the downloaded DBs
+    /bin/rm -rf ${array[@]:3}
 done
 
 # And we don't need blast if we've copied it, e.g., it is a local file
 if [ `dirname $BLASTN` == "." ] ; then
     /bin/rm -rf $BLASTN
 fi
-

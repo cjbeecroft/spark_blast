@@ -28,7 +28,7 @@ export ST_AUTH="https://sjc01.objectstorage.service.networklayer.com/auth/v1.0"
 #     |_|
 ######################################################################
 
-export MASTER="spark://spark1.w251.sftlyr.ws:7077"
+export MASTER="spark://`hostname -f`:7077"
 
 # Set the partition factor to cluster size - 1.  This assumes
 # that .../conf/slaves has no extra lines

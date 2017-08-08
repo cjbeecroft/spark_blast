@@ -9,26 +9,6 @@
 #     |_|                  |_____|
 ######################################################################
 
-# ST_KEY, ST_AUTH, ST_USER should be in the environment
-
-if [[ -z "${ST_KEY}" ]]; then
-    echo "ST_KEY is not defined"
-    exit
-fi
-
-if [[ -z "${ST_USER}" ]]; then
-    echo "ST_KEY is not defined"
-    exit
-fi
-
-if [[ -z "${ST_AUTH}" ]]; then
-    echo "ST_KEY is not defined"
-    exit
-fi
-
-# Get our auth keys from swfit
-eval `swift auth`
-
 # Assign a random number to make sure we have a unique name
 # across all of the workers
 OutFile=blast_db_$RANDOM"_"$RANDOM
@@ -64,6 +44,3 @@ swift upload $DBs $OutFile*
 if [ `dirname $MAKEBLASTDB` == "." ] ; then
     /bin/rm -rf $MAKEBLASTDB
 fi
-
-
-
