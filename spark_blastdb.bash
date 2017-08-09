@@ -9,6 +9,9 @@
 #     |_|                  |_____|
 ######################################################################
 
+# Generate the authentication tokens
+eval `swift auth`
+
 # Assign a random number to make sure we have a unique name
 # across all of the workers
 OutFile=blast_db_$RANDOM"_"$RANDOM

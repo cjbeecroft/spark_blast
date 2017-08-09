@@ -21,7 +21,7 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
         CORES - Number of cores to devote to each task
         BLASTN - Location of blastn executable
         QUERY_FILE - fasta query file
-        MODE - operation mode, 1 = top search, 2 = most commong genome
+        MODE - operation mode, 1 = top search, 2 = most common genome
         OBJECT_STORES - list of source containers that built the blast db
     '''
     # Set the context
