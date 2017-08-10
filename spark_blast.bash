@@ -16,7 +16,7 @@ while read LINE; do
     Database=${array[2]}
     
     # Download the database files from the object store
-    swift -q download $Container ${array[@]:3}
+    time swift -q download $Container ${array[@]:3}
 
     # Run Blast, it will tell us a story about our genomic poems
 
@@ -29,9 +29,9 @@ while read LINE; do
     #      graves might rise up through the mounds and gaze on the tossing
     #      billows, and be refresh'd by storms, immensity, liberty, action.
     #         -- Walt Whitman - Leaves of Grass: Book 6, Salut au Monde, verse 7
-    $BLASTN -db $Database $OPTIONS \
+    time $BLASTN -db $Database $OPTIONS \
         -num_threads $THREADS \
-        -outfmt "10 qseqid pident length mismatch gapopen qstart qend sstart ssend evalue bitscore stitle" \
+        -outfmt "10 qseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle" \
         < $QueryFile
 
     # remove the downloaded DBs
