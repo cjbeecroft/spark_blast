@@ -1,5 +1,7 @@
 import os
 import sys
+import logging
+import random
 from pyspark import SparkContext, SparkConf
 import swiftclient
 
@@ -12,7 +14,56 @@ import swiftclient
 '''
 
 
-def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES):
+def setup():
+    ''' setup the spark context and get the logger '''
+    # Set the context
+    conf = SparkConf()
+    conf.setExecutorEnv(key='Auth', value='value', pairs=None)
+    sc = SparkContext(conf=conf)
+    logger = sc._jvm.org.apache.log4j.LogManager.getLogger(__name__)
+    return sc, logger
+
+
+def func_map(result):
+    qseqid, pident, length, mismatch, gapopen, qstart, qend, sstart, send, evalue, bitscore = result.split(',')[:11]
+    return (qseqid, {
+                'pident': pident,
+                'length': length,
+                'mismatch': mismatch,
+                'gapopen': gapopen,
+                'qstart': qstart,
+                'quend': qend,
+                'sstart': sstart,
+                'send': send,
+                'evalue': evalue,
+                'bitscore': bitscore,
+                'stitle': ','.join(result.split(',')[11:])
+            })
+
+
+def func1_reduce(result1, result2):
+    if float(result1['bitscore']) >= float(result2['bitscore']):
+        return result1
+    return result2
+
+
+def func1_print(result):
+    return "%s: %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s" % \
+            (result[0],
+             result[1]['pident'],
+             result[1]['length'],
+             result[1]['mismatch'],
+             result[1]['gapopen'],
+             result[1]['qstart'],
+             result[1]['quend'],
+             result[1]['sstart'],
+             result[1]['send'],
+             result[1]['evalue'],
+             result[1]['bitscore'],
+             result[1]['stitle'])
+
+
+def main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE, QUERY_FILE, MODE, OBJECT_STORES):
     ''' Main function
         ST_AUTH - Object storage auth string where fna containers are found
         ST_USER - Ojbect storage user token
@@ -24,10 +75,6 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
         MODE - operation mode, 1 = top search, 2 = most common genome
         OBJECT_STORES - list of source containers that built the blast db
     '''
-    # Set the context
-    conf = SparkConf()
-    conf.setExecutorEnv(key='Auth', value='value', pairs=None)
-    sc = SparkContext(conf=conf)
 
     # Quiet the logs
     sc.setLogLevel("WARN")
@@ -36,29 +83,47 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
     # remote hosts to the shall script
     ShellScript = "spark_blast.bash"
     sc.addFile(ShellScript)
-    sc.addFile(QUERY_FILE)
 
     # Copy over blastn if it is local
     if os.path.dirname(BLASTN) == "." or os.path.dirname(BLASTN) == "":
         sc.addFile(BLASTN)
 
-    # Get the file name part of QUERY_FILE
-    Query_File = os.path.basename(QUERY_FILE)
-
     # this will be our root name for our DB names
     container = "blastdb_" + "-".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
+    # TODO need to verify that the container name doesn't exceed name size limits 
 
     # log into swift
     conn = swiftclient.Connection(user=ST_USER, key=ST_KEY, authurl=ST_AUTH)
 
+    # Take care of the query file
+    if LOCAL_FILE == '1':
+        # put it in the object store
+        # create a tmp container if it isn't there
+        if 'tmp' not in [t['name'] for t in conn.get_account()[1]]:
+            conn.put_container('tmp')
+            # TODO need to verify that container was created
+
+        # Name it something random, so if multiple runs are going we don't step on each other
+        random.seed()
+        Query_File = "query_" + str(random.randint(10000,99999)) + ".fasta"
+        # write it out to the object store
+        # TODO need to handle files larger than the object store maximum
+        #      Thought here is to overload the LOCAL_FILE var to communicate the number of pieces
+        #      (0 = not local, != 0 = in data store and in LOCAL_FILE pieces)
+        with open(QUERY_FILE, 'r') as local:
+            conn.put_object('tmp', Query_File, contents=local, content_type='text/plain')
+    else:
+        # if it is not a local file, just pass the name along
+        Query_File = QUERY_FILE
+
     # Verify the container we need is present
     if container not in [t['name'] for t in conn.get_account()[1]]:
-        print("No database parition created for %s partition factor %d" % ("+".join(sorted(OBJECT_STORES)), TASKS))
+        logger.info("No database parition created for %s partition factor %d" % ("+".join(sorted(OBJECT_STORES)), TASKS))
         exit()
 
-    # Get the list of objects we are oing to need
+    # Get the list of objects we are going to need
     dbs = {}
-    print("Collecting DBs from " + container)
+    logger.info("Collecting DBs from " + container)
     for data in conn.get_container(container)[1]:
         base = data['name'].split('.', 1)[0]
         if base not in dbs:
@@ -82,7 +147,8 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
     # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
     # this doesn't appear to be available in ver 2.1.1
     pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY,
-                                          'THREADS': str(CORES), 'OPTIONS': options, 'BLASTN': BLASTN})
+                                          'THREADS': str(CORES), 'OPTIONS': options, 'BLASTN': BLASTN,
+                                          'LOCAL_FILE': LOCAL_FILE})
 
     # Now let the bash script do its work.  This will run blast using our query file across all the
     # DB partitions searching for matching genomic reads.
@@ -91,70 +157,77 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
     # Missing me one place search another,
     # I stop somewhere waiting for you.
     #   -- Walt Whitman - Leaves of Grass: Book 3, Song of Myself, Verse 52
-    print("Search through all the DBs for matching sequence")
-    for line in pipeRDD.collect():
-        print(line)
+    logger.info("Search through all the DBs for matching sequence")
 
-    # Map Reduce now
+    for line in pipeRDD.map(func_map).reduceByKey(func1_reduce).collect():
+        print(func1_print(line))
 
-    # More code here
+    # We are done, remove our uploaded file
+    if LOCAL_FILE == '1':
+        # TODO if there are multiple pieces, we need to address cleaning up
+        conn.delete_object('tmp', Query_File)
 
 
-def usage():
+def usage(logger):
     ''' Usage: print home help information '''
-    print("Usage: <fasta file to query> <search mode [1|2]> <object container[s] used to build blast databases>")
-    print("       search mode 1: find top hit for each line in file, or")
-    print("                   2: find top references|organisms referenced in query file\n")
-    print("Envionment variables:")
-    print("       ST_AUTH - Object store auth token URL")
-    print("       ST_USER - Object store user name of account on cluster")
-    print("       ST_KEY - Object store user password of account on cluster")
-    print("       TASKS_TO_USE - The number of workers to devote to the task/number of db partitions to use")
-    print("       CORES_TO_USE - The number of cores each worker should use")
-    print("       BLASTN - The name and location of the blastn program")
+    logger.warn("Usage: <fasta file to query> <search mode [1|2]> <object container[s] used to build blast databases>")
+    logger.warn("       search mode 1: find top hit for each line in file, or")
+    logger.warn("                   2: find top references|organisms referenced in query file\n")
+    logger.warn("Envionment variables:")
+    logger.warn("       ST_AUTH - Object store auth token URL")
+    logger.warn("       ST_USER - Object store user name of account on cluster")
+    logger.warn("       ST_KEY - Object store user password of account on cluster")
+    logger.warn("       TASKS_TO_USE - The number of workers to devote to the task/number of db partitions to use")
+    logger.warn("       CORES_TO_USE - The number of cores each worker should use")
+    logger.warn("       BLASTN - The name and location of the blastn program")
 
 
 if __name__ == '__main__':
+
+    sc, logger = setup()
 
     # Get our environment
     ST_AUTH = os.getenv('ST_AUTH')
     ST_USER = os.getenv('ST_USER')
     ST_KEY = os.getenv('ST_KEY')
+    LOCAL_FILE = os.getenv('COPY_FILE_TO_OBJECT_STORE', '0')
     TASKS = os.getenv('TASKS_TO_USE')
     CORES = os.getenv('CORES_TO_USE')
     BLASTN = os.getenv('BLASTN', './blastn')
 
     if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
-        print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
-        print("Please set these values object store before running\n")
-        usage()
+        logger.error("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
+        logger.error("Please set these values object store before running\n")
+        usage(logger)
         exit()
 
     if not os.path.exists(BLASTN):
-        print("BLASTN env variable not set or blastn not in current directory")
+        logger.error("BLASTN env variable not set or blastn not in current directory")
         exit()
 
     try:
         TASKS = int(TASKS)
     except:
-        print("TASKS_TO_USE is not defined as an integer")
+        logger.error("TASKS_TO_USE is not defined as an integer")
         exit()
 
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 3:
         QUERY_FILE = sys.argv[1]
         MODE = sys.argv[2]
         OBJECT_STORES = sys.argv[3:]
+
+        # TODO need verify that QUERY FILE exists and is readable
 
         if CORES is None:
             CORES = 1
 
         if MODE not in ('1', '2'):
-            print("search mode is not 1 or 2\n")
-            usage()
+            logger.error("search mode is not 1 or 2\n")
+            usage(logger)
 
         else:
             # Run
-            main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES)
+            main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE, QUERY_FILE, MODE, OBJECT_STORES)
 
     else:
-        usage()
+        usage(logger)
