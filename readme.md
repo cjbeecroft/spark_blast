@@ -14,7 +14,7 @@ We use a similar approach for both steps. In each case, a bash helper script inv
 
 ## Packages
 - Swift (python-swiftclient)
-- Blast (TODO -- how to install blast)
+- Blast -- Follow instructions at https://www.ncbi.nlm.nih.gov/books/NBK52640/ to install. Move the `makeblastdb` and `blastn` binaries to spark invocation directory from <blast_root>/bin/
 ## Cluster
 This project assumes a functional spark cluster, similar to the set up in HW6
 
@@ -39,16 +39,23 @@ source setup.bash
 ## Step 1 -- Creating the db
 
 ```
-./run_blastdb.bash
+./run_blastdb.bash <collection_name>
 ```
-
+For example,
+```
+./run_blastdb.bash geba
+```
 
 This invokes `spark_blastdb.py`, which in turn invokes `spark_blastdb.bash` across the worker nodes
 
 ## Step 2 -- Querying the db
 
 ```
-./run_blast.bash
+./run_blast.bash <query_file> <mode> <collection_name>
+```
+For example,
+```
+run_blast.bash small_query.fasta 1 geba
 ```
 
 This invokes `spark_blast.py`, which in turn invokes `spark_blast.bash` across the worker nodes
