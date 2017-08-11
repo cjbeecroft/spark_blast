@@ -11,6 +11,7 @@ import swiftclient
     |_|                  |_____|
 '''
 
+N = 3
 
 def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES):
     ''' Main function
@@ -96,7 +97,25 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
         print(line)
 
     # Map Reduce now
+    if mode == "1":
+        # map "query, score, name" to (query, (score, name))
+        query_count  = pipeRDD.map (lambda x : (x.split(',')[0], x.split(',')[2:3])) \
+            .reduceByKey( lambda x, y : max(x[0], y[0])) # reduce by key, picking the one with the highest score
 
+        print query_count
+
+    elif mode == "2":
+        # grab the genus_species string. map to (genus_species, 1)
+        specie_count = pipeRDD.map( lambda x : (x.split(',')[11:].split(' ')[1:], 1) ) \
+            .reduceByKey(lambda x, y : x + y) # count the number of occurrences of each string (genus, count)
+            .map(lambda x:(x[1],x[0])) # map to (count, genus)
+            .sortByKey(False)  # sort descending
+
+        print specie_count.take(N)
+
+
+    else:
+        print "error -- mode not implemented"
     # More code here
 
 
