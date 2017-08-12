@@ -1,0 +1,207 @@
+FORMAT: 1A
+
+# Blast
+
+Runs blast on spark using reference genomic data
+
+# Blast API Root [/]
+
+## Get the Entry Point [GET]
+
++ Response 200 (application/json)
+
+        {
+          "jobs_url": "/jobs"
+        }
+
+# Group Jobs
+
+Jobs and results of jobs
+
+date is "YYYY-MM-DDThh:mm:ss.SSSZ"
+
+## Jobs Collection [/jobs]
+
+
+### List all jobs [GET]
+
++ Response 200 (application/json)
+         
+        {
+            jobs: [
+                {
+                    "id": "123456",
+                    "name": "job-1",
+                    "status": "COMPLETE",
+                    "location": "http://swift-url.com/object1",
+                    "start-time": "2017-8-11T12:00:00.000Z",
+                    "end-time": "2017-8-11T12:01:00.000Z"
+                },
+                {
+                    "id": "123457",
+                    "name": "job-2",
+                    "status": "INPROGRESS",
+                    "location": null,
+                    "start-time": "2017-8-11T12:00:00.000Z",
+                    "end-time": null 
+                }
+            ]
+        }
+
+### Create a new job [POST]
+
++ Request (application/json)
+
+        {
+            "name": "job-1",
+            "query": "ATAGTTT",
+            "ref-data": [
+                "geba", 
+                "blah"
+            ]
+        }
+
++ Response 201 (application/json)
+    
+    + Headers
+                
+            Location: /jobs/123456
+
+    + Body
+
+            {
+                "id": "123456",
+                "url": "/jobs/123456",
+                "name": "job-1",
+                "query_id": "11111",
+                "status": "COMPLETE",
+                "location": "http://swift-url.com/object1",
+                "start-time": "2017-8-11T12:00:00.000Z",
+                "end-time": "2017-8-11T12:01:00.000Z",
+                "ref-data": [
+                    "geba", 
+                    "blah"
+                ]
+            }
+
+## A Detailed Job [/jobs/{job_id}]
+
++ Parameters
+
+    + job_id: 1 (required, number) - ID as an int of the job you want in detail 
+
+### Get the details from a particular job [GET]
+
++ Response 200 (application/json)
+
+        {
+            job:
+                {
+                    "id": "123456",
+                    "url": "/jobs/123456",
+                    "name": "job-1",
+                    "query_id": "11111",
+                    "status": "COMPLETE",
+                    "location": "http://swift-url.com/object1",
+                    "start-time": "2017-8-11T12:00:00.000Z",
+                    "end-time": "2017-8-11T12:01:00.000Z",
+                    "ref-data": [
+                        "geba", 
+                        "blah"
+                    ]
+                }
+        }
+
+
+### Delete a particular job [DELETE]
+
++ Response 204
+
+
+# Group Queries 
+
+## Queries Collection [/queries]
+
+### List all queries [GET]
+
++ Response 200 (application/json)
+
+        {
+            queries: [
+                {
+                    "id": "11111",
+                    "name": "query-1",
+                    "created": "2017-8-11T12:00:00.000Z",
+                    "jobs": [
+                        "123456",
+                        "123457"
+                    ]
+                },
+                {
+                    "id": "22222",
+                    "name": "query-2",
+                    "created": "2017-8-11T12:10:00.000Z",
+                    "jobs": [
+                        "123458",
+                        "123459"
+                    ]
+                }
+            ]
+        }
+
+### Create a new query [POST]
+
++ Request (application/json)
+
+        {
+            "name": "query-1",
+            "query": "ATAGTTT"
+        }
+
++ Response 201 (application/json)
+    
+    + Headers
+        
+            Location: /queries/11111
+
+    + Body
+
+            {
+                "id": "123456",
+                "url": "/queries/11111",
+                "name": "query-1",
+                "created": "2017-8-11T12:00:00.000Z",
+                "jobs": [
+                    "123458",
+                    "123459"
+                ]
+            }
+        
+## A Detailed Query [/query/{query_id}]
+
+        + Parameters
+            + query_id: 1 (required, number) - ID as an int of the query you want in detail 
+
+### Get the details of a particular query [GET]
+
++ Response 200 (application/json)
+
+        {
+            query:
+                {
+                    "id": "123456",
+                    "url": "/queries/11111",
+                    "name": "query-1",
+                    "created": "2017-8-11T12:00:00.000Z",
+                    "jobs": [
+                        "123458",
+                        "123459"
+                    ]
+                }
+        }
+
+
+### Delete a particular query [DELETE]
+
++ Response 204
+
