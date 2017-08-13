@@ -8,7 +8,7 @@ import uuid
 
 class Query(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    url = models.URLField(blank=True)
+    #url = models.URLField(blank=True)
     name = models.CharField(max_length=100, default='Default_Query_Name')
     sequence = models.TextField(null=False)
     created = models.DateTimeField(auto_now_add=True)
@@ -24,7 +24,7 @@ class Job(models.Model):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    url = models.URLField(blank=True)
+    #url = models.URLField(blank=True)
     name = models.CharField(max_length=100, default='Default_Job_Name')
     query = models.ForeignKey(Query, null=True,related_name='jobs', on_delete=models.CASCADE )
     status = models.CharField(max_length=2, choices=STATUSES)

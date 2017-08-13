@@ -7,7 +7,12 @@ from django.contrib.auth.models import User
 
 class QuerySerializer(serializers.ModelSerializer):
     #url = serializers.HyperlinkedIdentityField(view_name='query_detail')
-    jobs = serializers.PrimaryKeyRelatedField(many=True, queryset=Job.objects.all(), required=False)
+    jobs = serializers.HyperlinkedRelatedField(
+        many=True,
+        queryset=Job.objects.all(),
+        required=False,
+        view_name='job-detail'
+    )
     creator = serializers.ReadOnlyField(source='creator.username')
 
     class Meta:
@@ -17,6 +22,7 @@ class QuerySerializer(serializers.ModelSerializer):
 
 class JobSerializer(serializers.ModelSerializer):
     #job = serializers.HyperlinkedIdentityField(view_name='job_detail')
+    query = QuerySerializer(required=False)
 
     class Meta:
         model = Job
