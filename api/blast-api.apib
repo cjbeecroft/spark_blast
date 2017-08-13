@@ -88,7 +88,7 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 
 + Parameters
 
-    + job_id: 1 (required, number) - ID as an int of the job you want in detail 
+    + job_id: 123456 (required, number) - ID as an int of the job you want in detail 
 
 ### Get the details from a particular job [GET]
 
@@ -155,7 +155,7 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 
         {
             "name": "query-1",
-            "query": "ATAGTTT"
+            "sequence": "ATAGTTT"
         }
 
 + Response 201 (application/json)
@@ -170,6 +170,7 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
                 "id": "123456",
                 "url": "/queries/11111",
                 "name": "query-1",
+                "sequence": "ATAGTTT",
                 "created": "2017-8-11T12:00:00.000Z",
                 "jobs": [
                     "123458",
@@ -179,8 +180,9 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
         
 ## A Detailed Query [/query/{query_id}]
 
-        + Parameters
-            + query_id: 1 (required, number) - ID as an int of the query you want in detail 
++ Parameters
+
+    + query_id: 11111 (required, number) - ID as an int of the query you want in detail 
 
 ### Get the details of a particular query [GET]
 
@@ -192,6 +194,7 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
                     "id": "123456",
                     "url": "/queries/11111",
                     "name": "query-1",
+                    "sequence": "ATAGTTT",
                     "created": "2017-8-11T12:00:00.000Z",
                     "jobs": [
                         "123458",
