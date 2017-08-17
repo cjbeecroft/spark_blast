@@ -116,12 +116,14 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
         for line in  query_count.collect():
             print line
     elif MODE == "2":
-        specie_count = pipeRDD.map( lambda x : (x.split(',')[11].split(' ', 1)[-1], 1) ) \
+
+        specie_count = pipeRDD.map( lambda x : (x.split(',')[11].split(' ', 1)[-1], x.split(',')[0] )) \
+            .distinct() \
+            .map(lambda x : (x[0], 1)) \
             .reduceByKey(lambda x,y:x+y) \
-            .map(lambda x:(x[1],x[0])) \
             .sortByKey(False) \
-            .map(lambda x:(str(x[1]) + ", " + str(x[0])))
-        for line in specie_count.take(N):
+            .map(lambda x:(str(x[0]) + ", " + str(x[1])))
+        for line in specie_count.collect():
             print line
 
 
