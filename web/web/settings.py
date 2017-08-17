@@ -27,7 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-APPEND_SLASH = False
+APPEND_SLASH = True
 
 
 # Application definition
@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'webapp'
+    'webapp.apps.WebappConfig',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -85,6 +86,13 @@ DATABASES = {
     },
 }
 
+SOFTLAYER_OS = {
+    'public_url': 'https://sjc01.objectstorage.softlayer.net/auth/v1.0/',
+    'private_url': 'https://sjc01.objectstorage.service.networklayer.com/auth/v1.0/',
+    'username': 'SLOS1356065-2:SL1356065',
+    'api_key': os.environ['SL_API_KEY']
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
@@ -123,3 +131,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# celery settings
+CELERY_BROKER_URL = 'pyamqp://'
+CELERY_RESULT_BACKEND = 'rpc://'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_ENABLE_UTC = True
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_RESULT_BACKEND = 'django-cache'

@@ -3,26 +3,22 @@ from __future__ import unicode_literals
 
 from serializers import UserSerializer
 from django.contrib.auth.models import User
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
 from models import Job
 from models import Query
+from models import Dataset
+from models import Raw
 from serializers import JobSerializer
+from serializers import JobListSerializer
 from serializers import QuerySerializer
-from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from django.http import Http404
-from rest_framework.views import APIView
-from rest_framework import mixins
-from rest_framework import generics
+from serializers import DatasetSerializer
+from serializers import RawSerializer
 from rest_framework import permissions
 from permissions import IsOwnerOrReadOnly
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework import viewsets
+from rest_framework.decorators import detail_route, list_route
 
 @api_view(['GET'])
 def api_root(request, format=None):
@@ -36,6 +32,12 @@ class JobViewSet(viewsets.ModelViewSet):
     serializer_class = JobSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return JobListSerializer
+        else:
+            return JobSerializer
+
 class QueryViewSet(viewsets.ModelViewSet):
     queryset = Query.objects.all()
     serializer_class = QuerySerializer
@@ -45,6 +47,23 @@ class QueryViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(creator=self.request.user)
 
+    def get_queryset(self):
+        user = self.request.user
+        return Query.objects.filter(creator=user)
+
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+class DatasetViewSet(viewsets.ModelViewSet):
+    queryset = Dataset.objects.all()
+    serializer_class = DatasetSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+
+    def perform_create(self, serializer):
+        serializer.save(creator=self.request.user)
+
+class RawViewSet(viewsets.ModelViewSet):
+    queryset = Raw.objects.all()
+    serializer_class = RawSerializer
+

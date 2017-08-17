@@ -8,7 +8,6 @@ import uuid
 
 class Query(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    #url = models.URLField(blank=True)
     name = models.CharField(max_length=100, default='Default_Query_Name')
     sequence = models.TextField(null=False)
     created = models.DateTimeField(auto_now_add=True)
@@ -24,14 +23,11 @@ class Job(models.Model):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    #url = models.URLField(blank=True)
     name = models.CharField(max_length=100, default='Default_Job_Name')
     query = models.ForeignKey(Query, null=True,related_name='jobs', on_delete=models.CASCADE )
     status = models.CharField(max_length=2, choices=STATUSES)
-    location = models.URLField(default='swift.example.com/object1')
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True)
-    backend_job = models.TextField(null=True)
 
     def save(self, *args, **kwargs):
         self.backend_job = "job started!"
@@ -40,7 +36,25 @@ class Job(models.Model):
     class Meta:
         ordering = ['start_time']
 
+class Dataset(models.Model):
+    name = models.CharField(max_length=100, primary_key=True, null=False)
+    jobs = models.ManyToManyField(Job, null=True,related_name='datasets')
+    creator = models.ForeignKey('auth.User', related_name='datasets', on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
 
+    def __unicode__(self):
+        return '%s' % (self.name)
+
+    class Meta:
+        ordering = ['created']
+
+class Raw(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    datum = models.ForeignKey(Dataset, related_name="raw_data", on_delete=models.CASCADE, null=False)
+    location = models.URLField(null=False, blank=False)
+
+    def __unicode__(self):
+        return '%s' % (self.location)
 
 
 

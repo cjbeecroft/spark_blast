@@ -7,6 +7,8 @@ router = DefaultRouter()
 router.register(r'queries', views.QueryViewSet)
 router.register(r'jobs', views.JobViewSet)
 router.register(r'users', views.UserViewSet)
+router.register(r'datasets', views.DatasetViewSet)
+router.register(r'raw', views.RawViewSet)
 
 urlpatterns = [
     url(r'^', include(router.urls)),

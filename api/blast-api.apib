@@ -17,45 +17,44 @@ Runs blast on spark using reference genomic data
 # Group Jobs
 
 Jobs and results of jobs
+These represent runs of the blast algorithm via spark using a particular search query on specified reference data
 
 date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 
 ## Jobs Collection [/jobs]
 
-
 ### List all jobs [GET]
 
 + Response 200 (application/json)
          
-        {
-            jobs: [
-                {
-                    "id": "123456",
-                    "name": "job-1",
-                    "status": "COMPLETE",
-                    "location": "http://swift-url.com/object1",
-                    "start-time": "2017-8-11T12:00:00.000Z",
-                    "end-time": "2017-8-11T12:01:00.000Z"
-                },
-                {
-                    "id": "123457",
-                    "name": "job-2",
-                    "status": "INPROGRESS",
-                    "location": null,
-                    "start-time": "2017-8-11T12:00:00.000Z",
-                    "end-time": null 
-                }
-            ]
-        }
+        [
+            {
+                "id": "123456",
+                "name": "job-1",
+                "status": "COMPLETE",
+                "location": "http://swift-url.com/object1",
+                "start-time": "2017-8-11T12:00:00.000Z",
+                "end-time": "2017-8-11T12:01:00.000Z"
+            },
+            {
+                "id": "123457",
+                "name": "job-2",
+                "status": "INPROGRESS",
+                "location": null,
+                "start-time": "2017-8-11T12:00:00.000Z",
+                "end-time": null
+            }
+        ]
 
 ### Create a new job [POST]
+Fires off a job to spark using the specified query and the specified data
 
 + Request (application/json)
 
         {
             "name": "job-1",
-            "query": "ATAGTTT",
-            "ref-data": [
+            "query": "11111",
+            "data": [
                 "geba", 
                 "blah"
             ]
@@ -95,21 +94,18 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 + Response 200 (application/json)
 
         {
-            job:
-                {
-                    "id": "123456",
-                    "url": "/jobs/123456",
-                    "name": "job-1",
-                    "query_id": "11111",
-                    "status": "COMPLETE",
-                    "location": "http://swift-url.com/object1",
-                    "start-time": "2017-8-11T12:00:00.000Z",
-                    "end-time": "2017-8-11T12:01:00.000Z",
-                    "ref-data": [
-                        "geba", 
-                        "blah"
-                    ]
-                }
+            "id": "123456",
+            "url": "/jobs/123456",
+            "name": "job-1",
+            "query_id": "11111",
+            "status": "COMPLETE",
+            "location": "http://swift-url.com/object1",
+            "start-time": "2017-8-11T12:00:00.000Z",
+            "end-time": "2017-8-11T12:01:00.000Z",
+            "data": [
+                "geba",
+                "blah"
+            ]
         }
 
 
@@ -119,6 +115,7 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 
 
 # Group Queries 
+Queries are short sequences of DNA that will be searched for in the reference data by blast
 
 ## Queries Collection [/queries]
 
@@ -126,28 +123,26 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 
 + Response 200 (application/json)
 
-        {
-            queries: [
-                {
-                    "id": "11111",
-                    "name": "query-1",
-                    "created": "2017-8-11T12:00:00.000Z",
-                    "jobs": [
-                        "123456",
-                        "123457"
-                    ]
-                },
-                {
-                    "id": "22222",
-                    "name": "query-2",
-                    "created": "2017-8-11T12:10:00.000Z",
-                    "jobs": [
-                        "123458",
-                        "123459"
-                    ]
-                }
-            ]
-        }
+        [
+            {
+                "id": "11111",
+                "name": "query-1",
+                "created": "2017-8-11T12:00:00.000Z",
+                "jobs": [
+                    "123456",
+                    "123457"
+                ]
+            },
+            {
+                "id": "22222",
+                "name": "query-2",
+                "created": "2017-8-11T12:10:00.000Z",
+                "jobs": [
+                    "123458",
+                    "123459"
+                ]
+            }
+        ]
 
 ### Create a new query [POST]
 
@@ -189,18 +184,15 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 + Response 200 (application/json)
 
         {
-            query:
-                {
-                    "id": "123456",
-                    "url": "/queries/11111",
-                    "name": "query-1",
-                    "sequence": "ATAGTTT",
-                    "created": "2017-8-11T12:00:00.000Z",
-                    "jobs": [
-                        "123458",
-                        "123459"
-                    ]
-                }
+            "id": "123456",
+            "url": "/queries/11111",
+            "name": "query-1",
+            "sequence": "ATAGTTT",
+            "created": "2017-8-11T12:00:00.000Z",
+            "jobs": [
+                "123458",
+                "123459"
+            ]
         }
 
 
@@ -208,3 +200,87 @@ date is "YYYY-MM-DDThh:mm:ss.SSSZ"
 
 + Response 204
 
+# Group Data
+Metadata of containers in Softlayer object store.
+These hold collections of reference dna that blast will be searching.
+The links to the raw data for each datum are stored in [/raw/].
+
+## Data Collection [/data/]
+
+### List all Data [GET]
+
++ Response 200 (application/json)
+
+        [
+            {
+                "name": "geba",
+                "url": "localhost:8000/data/geba"
+                "created": "2017-8-11T12:00:00.000Z",
+                "jobs": [
+                    "123456",
+                    "123457"
+                ]
+            },
+            {
+                "name": "geba2",
+                "url": "localhost:8000/data/geba2"
+                "created": "2017-8-11T12:10:00.000Z",
+                "jobs": [
+                    "123458",
+                    "123459"
+                ]
+            }
+        ]
+
+### Create a new datum [POST]
+
++ Request (application/json)
+
+        {
+            "name": "geba",
+        }
+
++ Response 201 (application/json)
+
+    + Headers
+
+            Location: /data/geba
+
+    + Body
+
+            {
+                "name": "geba",
+                "url": "http://localhost/data/geba",
+                "created": "2017-8-11T12:00:00.000Z",
+                "jobs": [],
+                "raw_data": []
+            }
+
+## A Detailed Datum [/data/{datum_name}]
+
++ Parameters
+
+    + datum_name: geba (required, string) - name of the datum
+
+### Get the details of a particular datum [GET]
+
++ Response 200 (application/json)
+
+        {
+            "name": "geba",
+            "url": "http://localhost:8000/data/geba",
+            "created": "2017-8-11T12:00:00.000Z",
+            "jobs": [
+                "123458",
+                "123459"
+            ],
+            "raw_data": [
+                "https://sjc01.objectstorage.softlayer.net/v1/AUTH_580704c6-c8ed-4329-8bcf-41ed080ccf5d/geba/actinosynnema_mirum_DSM_43827/080219/4082379.fsa",
+                "https://sjc01.objectstorage.softlayer.net/v1/AUTH_580704c6-c8ed-4329-8bcf-41ed080ccf5d/geba/acidimicrobium_ferrooxidans_DSM_10331/080504/4083228.fsa"
+            ]
+        }
+
+
+### Delete a particular datum and associated raw data urls [DELETE]
+
++ Response 204
