@@ -20,6 +20,7 @@ from rest_framework.reverse import reverse
 from rest_framework import viewsets
 from rest_framework.decorators import detail_route, list_route
 from cl_interface import CLInterface
+import tasks
 
 
 
@@ -44,7 +45,7 @@ class JobViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         instance = serializer.save()
         print("post to yarn!")
-        CLInterface.submit_job(instance)
+        tasks.submit_spark_job.delay(instance.id)
 
 
 class QueryViewSet(viewsets.ModelViewSet):
