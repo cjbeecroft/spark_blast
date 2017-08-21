@@ -19,6 +19,9 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from rest_framework import viewsets
 from rest_framework.decorators import detail_route, list_route
+from cl_interface import CLInterface
+
+
 
 @api_view(['GET'])
 def api_root(request, format=None):
@@ -37,6 +40,12 @@ class JobViewSet(viewsets.ModelViewSet):
             return JobListSerializer
         else:
             return JobSerializer
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        print("post to yarn!")
+        CLInterface.submit_job(instance)
+
 
 class QueryViewSet(viewsets.ModelViewSet):
     queryset = Query.objects.all()
