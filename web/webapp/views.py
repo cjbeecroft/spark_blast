@@ -45,7 +45,7 @@ class JobViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         instance = serializer.save()
         print("post to yarn!")
-        tasks.submit_spark_job.delay(instance.id)
+        tasks.download_data.delay(instance.id)
 
 
 class QueryViewSet(viewsets.ModelViewSet):

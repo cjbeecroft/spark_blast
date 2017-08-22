@@ -11,16 +11,20 @@ from subprocess import PIPE
 @task(name="download_data")
 def download_data(job_id):
     job = requests.get("http://localhost:8000/jobs/" + job_id + "/", auth=("daniel", "welcome1111"))
-    print "got job!"
     datasets = job.json()['datasets']
+    if not datasets:
+        print "no datasets! aborting."
+        return
     all_files = []
-    config_str = "--conf " + "dirs="
+    config_str = "--conf dirs="
     for dataset in datasets:
-        print "iterating in datasets"
+        print("iterating through " + dataset)
         data = requests.get(dataset, auth=("daniel", "welcome1111")).json()
+        print data
 
         # if the hdfs_dir field is empty, it isn't on hdfs. we download and copy it there
-        if (data['hdfs_dir'] == None | data['hdfs_dir'] == ''| data['hdfs_dir'] == 'null'):
+        if not data['hdfs_dir']:
+            print "no hdfs dir found, downloading..."
             hdfs_files = []
             id = data['name']
             path = "/data/spark_blast/" + id
@@ -39,10 +43,10 @@ def download_data(job_id):
                 call(['hdfs', 'dfs', '-moveFromLocal', os.path.join(path, filename), os.path.join(path, filename)])
                 hdfs_files.append(os.path.join(path, filename))
             data['hdfs_dir'] = path
-            requests.put(data['location'], json.dumps(data), auth=("daniel", "welcome1111"))
+            requests.put(str(data['url']), json.dumps(data), auth=("daniel", "welcome1111"))
 
-        config_str.append(data['hdfs_dir'] + ",")
-        config_str = config_str[:-1]
+        config_str = config_str + str(data['hdfs_dir']) + ","
+    config_str = config_str[:-1]
     print config_str
 
 
