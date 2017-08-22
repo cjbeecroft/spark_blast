@@ -86,7 +86,8 @@ class DatabaseViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     def perform_create(self, serializer):
-        serializer.save(creator=self.request.user)
+        instance = serializer.save(creator=self.request.user)
+        tasks.create_db.delay(instance.datasets)
 
 class RawViewSet(viewsets.ModelViewSet):
     queryset = Raw.objects.all()

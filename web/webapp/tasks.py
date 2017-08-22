@@ -8,6 +8,8 @@ import json
 from subprocess import Popen
 from subprocess import call
 from subprocess import PIPE
+from django.conf import settings
+
 
 @task(name="download_data")
 def download_data(job_id):
@@ -68,22 +70,23 @@ def submit_spark_job(job_id):
 
 
 @task(name="create_db")
-def create_db(host, database, file):
-    #download the data to the local disk
-    call(['ssh', 'spark@{}'.format(host), 'hdfs dfs -get {}'.format(file)])
+def create_db(datasets):
+    #job = requests.get("http://localhost:8000/jobs/" + job_id + "/", auth=("daniel", "welcome1111"))
 
-    # download the executable to local disk
-    call(['ssh', 'spark@{}'.format(host), 'hdfs dfs -get /exec/spark_blast/makeblastdb'])
+    spark_settings =
+    os.environ['MASTER'] = settings.SPARK.MASTER
+    os.environ['TASKS_TO_USE'] = settings.SPARK.TASKS_TO_USE
+    os.environ['CORES_TO_USE'] = settings.SPARK.CORES_TO_USE
+    os.environ['MAX_FILE_SIZE'] = settings.SPARK.MAX_FILE_SIZE
 
-    # make executable, well, executable
-    call(['ssh', 'spark@{}'.format(host), 'chmod +x makeblastdb'])
+    os.environ['ST_USER'] = settings.SOFTLAYER.ST_USER
+    os.environ['ST_AUTH'] = settings.SOFTLAYER.ST_AUTH
+    os.environ['ST_KEY'] = settings.SOFTLAYER.ST_KEY
 
-    # call executable
-    id = uuid.uuid4()
-    call(['ssh', 'spark@{}'.format(host), 'makeblastdb -dbtype nucl -in {} -title {} -out {} -max_file_sz {}'.format(file, id, database, "2GB")])
-
-    # upload back to hdfs
-    call(['ssh', 'spark@{}'.format(host), 'hdfs dfs -moveFromLocal {} /data/spark_blast/{}/{}'.format(database, id)])
+    args = []
+    args.append('run_blast_db.bash')
+    args.extend(datasets)
+    call(args)
 
 
 

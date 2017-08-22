@@ -92,9 +92,16 @@ DATABASES = {
 
 SOFTLAYER_OS = {
     'public_url': 'https://sjc01.objectstorage.softlayer.net/auth/v1.0/',
-    'private_url': 'https://sjc01.objectstorage.service.networklayer.com/auth/v1.0/',
-    'username': 'SLOS1356065-2:SL1356065',
-    'api_key': os.environ['SL_API_KEY']
+    'ST_AUTH': 'https://sjc01.objectstorage.service.networklayer.com/auth/v1.0/',
+    'ST_USER': 'SLOS1356065-2:SL1356065',
+    'ST_KEY': os.environ['SL_API_KEY']
+}
+
+SPARK = {
+    'MASTER': "spark://`hostname -f`:7077",
+    'TASKS_TO_USE': 3,
+    'CORES_TO_USE': 2,
+    'MAX_FILE_SIZE': "2GB",
 }
 
 
