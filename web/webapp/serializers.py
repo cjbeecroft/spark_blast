@@ -51,7 +51,7 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dataset
-        fields = ('name', 'url', 'created', 'jobs', 'raw_data')
+        fields = ('name', 'url', 'created', 'hdfs_dir', 'jobs', 'raw_data')
 
 class RawSerializer(serializers.ModelSerializer):
 

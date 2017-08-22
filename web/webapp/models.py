@@ -40,6 +40,7 @@ class Job(models.Model):
 class Dataset(models.Model):
     name = models.CharField(max_length=100, primary_key=True, null=False)
     jobs = models.ManyToManyField(Job, null=True,related_name='datasets')
+    hdfs_dir = models.CharField(max_length=200, null=True, blank=True)
     creator = models.ForeignKey('auth.User', related_name='datasets', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
 
@@ -51,7 +52,7 @@ class Dataset(models.Model):
 
 class Raw(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    datum = models.ForeignKey(Dataset, related_name="raw_data", on_delete=models.CASCADE, null=False)
+    dataset = models.ForeignKey(Dataset, related_name="raw_data", on_delete=models.CASCADE, null=False)
     location = models.URLField(null=False, blank=False)
 
     def __unicode__(self):
