@@ -32,7 +32,7 @@ class JobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Job
-        fields = ('id', 'url', 'name', 'yarn_id', 'status', 'query', 'datasets', 'start_time', 'end_time',  )
+        fields = ('id', 'url', 'name', 'yarn_id', 'status', 'job_type', 'query', 'datasets', 'start_time', 'end_time',)
 
 class JobListSerializer(serializers.ModelSerializer):
 

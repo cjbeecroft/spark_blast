@@ -44,8 +44,13 @@ class JobViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         instance = serializer.save()
-        print("post to yarn!")
-        tasks.download_data.delay(instance.id)
+        if (instance.job_type == 'DB'):
+            print("post to yarn!")
+            tasks.download_data.delay(instance.id)
+        else:
+            for i in range(1,4):
+                host = "genomic" + str(i)
+                tasks.create_db.delay(host, instance.id)
 
 
 class QueryViewSet(viewsets.ModelViewSet):

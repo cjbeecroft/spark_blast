@@ -11,6 +11,17 @@ import swiftclient
     |_|                  |_____|
 '''
 
+def maxByIndex(a, b, index):
+    aScore = a[index]
+    bScore = b[index]
+
+    maxScore = max(aScore, bScore)
+
+    if aScore == maxScore:
+        return a
+    else:
+        return b
+
 
 def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES):
     ''' Main function
@@ -98,17 +109,22 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
     #   -- Walt Whitman - Leaves of Grass: Book 3, Song of Myself, Verse 52
     print("Search through all the DBs for matching sequence")
     if MODE == "1":
-        query_count  = pipeRDD.map (lambda x : (x.split(',')[0], x.split(',')[2:3])) \
-            .reduceByKey( lambda x, y : max(x[0], y[0])).map(lambda x : (x[1], x[0])).sortByKey(True) 
-
+        query_count  = pipeRDD.map(lambda x : (x.split(',')[0], (x.split(',')[2], x.split('|')[-1:][0]) )) \
+            .reduceByKey( lambda x, y : maxByIndex(x, y, 0)) \
+            .sortByKey(True) \
+            .map(lambda x : str(x[0]) + ", " + str(x[1][1]))
         for line in  query_count.collect():
             print line
     elif MODE == "2":
-        specie_count = pipeRDD.map( lambda x : (x.split(',')[11].split(' ', 1)[-1], 1) ) \
-             .reduceByKey(lambda x,y:x+y) \
-             .map(lambda x:(x[1],x[0])) \
-             .sortByKey(False)
-        print specie_count.take(N)
+
+        specie_count = pipeRDD.map( lambda x : (x.split(',')[11].split(' ', 1)[-1], x.split(',')[0] )) \
+            .distinct() \
+            .map(lambda x : (x[0], 1)) \
+            .reduceByKey(lambda x,y:x+y) \
+            .sortByKey(False) \
+            .map(lambda x:(str(x[0]) + ", " + str(x[1])))
+        for line in specie_count.collect():
+            print line
 
 
 def usage():

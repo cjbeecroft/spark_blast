@@ -1,5 +1,0 @@
-setup.py
-blast.egg-info/PKG-INFO
-blast.egg-info/SOURCES.txt
-blast.egg-info/dependency_links.txt
-blast.egg-info/top_level.txt

@@ -13,7 +13,7 @@ import swiftclient
 '''
 
 
-def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STORES):
+def main():
     ''' Main function
         ST_AUTH - Object storage auth string where fna containers are found
         ST_USER - Ojbect storage user token
@@ -26,55 +26,32 @@ def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STO
     # Set the context
     conf = SparkConf()
     sc = SparkContext(conf=conf)
+    all_config = sc._conf.getAll()
+    fasta_files = all_config['dirs'].split(",")
+
+    OBJECT_STORES = ['geba']
+    TASKS = 3
 
     # Quiet the logs
     sc.setLogLevel("WARN")
 
     # Set our spark database creation script and add all the files that are needed to be on the
     # remote hosts to the shall script
-    ShellScript = "spark_blastdb.bash"
+    ShellScript = "hdfs:///exec/spark_blast/spark_blastdb.bash"
     sc.addFile(ShellScript)
 
-    # Copy over makeblastdb if it is local
-    if os.path.dirname(MAKEBLASTDB) == "." or os.path.dirname(MAKEBLASTDB) == "":
-        sc.addFile(MAKEBLASTDB)
-
+    sc.addFile("hdfs:///exec/spark_blast/makeblastdb")
     # this will be our root name for our DB names
     db_container = "blastdb_" + "-".join(sorted(OBJECT_STORES)) + "_" + str(TASKS)
 
-    # log into swift
-    conn = swiftclient.Connection(user=ST_USER, key=ST_KEY, authurl=ST_AUTH)
-
-    # Create the continer for our results if it does not exist
-    if db_container not in [t['name'] for t in conn.get_account()[1]]:
-        print("Creating container " + db_container + " to contain our blast dbs")
-        conn.put_container(db_container)
-    else:
-        # Container already existed, remove any contents
-        print("Container " + db_container + " already exists, removing contents")
-        for data in conn.get_container(db_container)[1]:
-            conn.delete_object(db_container, data['name'])
-
-    # Get the list of objects we are going to need
-    files = []
-    for fna_container in OBJECT_STORES:
-        # Check to see if the fna_container exists, if not exit
-        if fna_container not in [t['name'] for t in conn.get_account()[1]]:
-            print("Container %s does not exist" % fna_container)
-            exit()
-
-        print("Collecting files from " + fna_container)
-        for data in conn.get_container(fna_container)[1]:
-            files.append("%s/%s" % (fna_container, data['name']))
-
+    # Get the list of objects we are going to need, i.e. .fast files
     # Distribute our data, shuffle it in case there is any size ordering going on
-    shuffle(files)
-    distData = sc.parallelize(files, TASKS)
+    shuffle(fasta_files)
+    distData = sc.parallelize(fasta_files, TASKS)
 
     # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
     # this doesn't appear to be available in ver 2.1.1
-    pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY,
-                                          'DBs': db_container, 'MAX_FILE_SIZE': MAX_FILE_SIZE, 'MAKEBLASTDB': MAKEBLASTDB})
+    pipeRDD = distData.pipe(ShellScript)
 
     # Now let the bash script do its work.  This will assemble and store the results of all the list of
     # fna files collected from each Object Store
@@ -102,38 +79,4 @@ def usage():
 
 if __name__ == '__main__':
 
-    # Get our environment
-    ST_AUTH = os.getenv('ST_AUTH')
-    ST_USER = os.getenv('ST_USER')
-    ST_KEY = os.getenv('ST_KEY')
-    TASKS = os.getenv('TASKS_TO_USE')
-    MAX_FILE_SIZE = os.getenv('MAX_FILE_SIZE')
-    # Get the blast program, default to local copy of makeblastdb
-    MAKEBLASTDB = os.getenv('MAKEBLASTDB', './makeblastdb')
-
-    if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
-        print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
-        print("Please set these values object store before running")
-        usage()
-        exit()
-
-    if not os.path.exists(MAKEBLASTDB):
-        print("MAKEBLASTDB env variable not set or makeblastdb not in current directory")
-        usage()
-        exit()
-
-    try:
-        TASKS = int(TASKS)
-    except:
-        print("TASKS_TO_USE is not defined as an integer")
-        usage()
-        exit()
-
-    if len(sys.argv) > 1:
-        OBJECT_STORES = sys.argv[1:]
-
-        # Run
-        main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STORES)
-    else:
-        print("No object containers listed, please provide a list of object containers containing fna files")
-        usage()
+    main()

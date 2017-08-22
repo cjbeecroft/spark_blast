@@ -21,11 +21,16 @@ class Job(models.Model):
         ('IP', 'In Progress'),
         ('CO', 'Completed'),
     )
+    JOB_TYPES = (
+        ('DB', 'Database Creation Job'),
+        ('GS', 'Genomic Search Job'),
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, default='Default_Job_Name')
     query = models.ForeignKey(Query, null=True,related_name='jobs', on_delete=models.CASCADE )
     status = models.CharField(max_length=2, choices=STATUSES)
+    job_type = models.CharField(max_length=2, choices=JOB_TYPES, default="DB")
     yarn_id = models.CharField(max_length=100,null=True)
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True)

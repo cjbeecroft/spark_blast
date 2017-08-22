@@ -3,6 +3,7 @@ from __future__ import absolute_import, unicode_literals
 from celery import task
 import requests
 import os
+import uuid
 import json
 from subprocess import Popen
 from subprocess import call
@@ -16,7 +17,7 @@ def download_data(job_id):
         print "no datasets! aborting."
         return
     all_files = []
-    config_str = "--conf dirs="
+    config_str = "--conf files="
     for dataset in datasets:
         print("iterating through " + dataset)
         data = requests.get(dataset, auth=("daniel", "welcome1111")).json()
@@ -45,7 +46,7 @@ def download_data(job_id):
             data['hdfs_dir'] = path
             requests.put(str(data['url']), json.dumps(data), auth=("daniel", "welcome1111"))
 
-        config_str = config_str + str(data['hdfs_dir']) + ","
+            config_str = config_str + str(os.path.join(path, filename)) + ","
     config_str = config_str[:-1]
     print config_str
 
@@ -63,4 +64,36 @@ def submit_spark_job(job_id):
 	    print job
 	    requests.put("http://localhost:8000/jobs/" + job_id + "/", data, auth=("daniel", "welcome1111"))
 	    return
-    
+
+
+
+@task(name="create_db")
+def create_db(host, database, file):
+    #download the data to the local disk
+    call(['ssh', 'spark@{}'.format(host), 'hdfs dfs -get {}'.format(file)])
+
+    # download the executable to local disk
+    call(['ssh', 'spark@{}'.format(host), 'hdfs dfs -get /exec/spark_blast/makeblastdb'])
+
+    # make executable, well, executable
+    call(['ssh', 'spark@{}'.format(host), 'chmod +x makeblastdb'])
+
+    # call executable
+    id = uuid.uuid4()
+    call(['ssh', 'spark@{}'.format(host), 'makeblastdb -dbtype nucl -in {} -title {} -out {} -max_file_sz {}'.format(file, id, database, "2GB")])
+
+    # upload back to hdfs
+    call(['ssh', 'spark@{}'.format(host), 'hdfs dfs -moveFromLocal {} /data/spark_blast/{}/{}'.format(database, id)])
+
+
+
+
+
+
+
+
+
+
+
+
+
