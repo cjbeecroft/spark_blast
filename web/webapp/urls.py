@@ -8,6 +8,7 @@ router.register(r'queries', views.QueryViewSet)
 router.register(r'jobs', views.JobViewSet)
 router.register(r'users', views.UserViewSet)
 router.register(r'datasets', views.DatasetViewSet)
+router.register(r'databases', views.DatabaseViewSet)
 router.register(r'raw', views.RawViewSet)
 
 urlpatterns = [

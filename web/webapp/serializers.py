@@ -1,8 +1,9 @@
 from rest_framework import serializers
-from webapp.models import Job
-from webapp.models import Query
-from webapp.models import Dataset
-from webapp.models import Raw
+from models import Job
+from models import Query
+from models import Database
+from models import Dataset
+from models import Raw
 from django.db.models import UUIDField
 from django.contrib.auth.models import User
 
@@ -23,16 +24,16 @@ class QuerySerializer(serializers.ModelSerializer):
 
 
 class JobSerializer(serializers.ModelSerializer):
-    datasets = serializers.HyperlinkedRelatedField(
+    databases = serializers.HyperlinkedRelatedField(
         many=True,
-        queryset=Dataset.objects.all(),
+        queryset=Database.objects.all(),
         required=True,
-        view_name='dataset-detail'
+        view_name='database-detail'
     )
 
     class Meta:
         model = Job
-        fields = ('id', 'url', 'name', 'yarn_id', 'status', 'job_type', 'query', 'datasets', 'start_time', 'end_time',)
+        fields = ('id', 'url', 'name', 'yarn_id', 'status', 'query', 'databases', 'start_time', 'end_time',)
 
 class JobListSerializer(serializers.ModelSerializer):
 
@@ -41,23 +42,42 @@ class JobListSerializer(serializers.ModelSerializer):
         fields = ('id', 'url', 'name', 'status', 'start_time', 'end_time', 'query' )
 
 class DatasetSerializer(serializers.ModelSerializer):
+    #jobs = serializers.HyperlinkedRelatedField(
+    #    many=True,
+    #    queryset=Job.objects.all(),
+    #    required=False,
+    #    view_name='job-detail'
+    #)
+    raw_data = serializers.StringRelatedField(many=True, required=False)
+
+    class Meta:
+        model = Dataset
+        fields = ('name', 'url', 'created', 'raw_data')
+
+class DatabaseSerializer(serializers.ModelSerializer):
     jobs = serializers.HyperlinkedRelatedField(
         many=True,
         queryset=Job.objects.all(),
         required=False,
         view_name='job-detail'
     )
+    datasets = serializers.HyperlinkedRelatedField(
+        many=True,
+        queryset=Dataset.objects.all(),
+        required=True,
+        view_name='dataset-detail'
+    )
     raw_data = serializers.StringRelatedField(many=True, required=False)
 
     class Meta:
-        model = Dataset
-        fields = ('name', 'url', 'created', 'hdfs_dir', 'jobs', 'raw_data')
+        model = Database
+        fields = ('name', 'url', 'created', 'jobs', 'datasets', 'raw_data')
 
 class RawSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Raw
-        fields = ('id', 'dataset','location', 'url')
+        fields = ('id', 'dataset','database','location', 'url')
 
 class UserSerializer(serializers.ModelSerializer):
     users_queries = serializers.PrimaryKeyRelatedField(many=True, queryset=Query.objects.all())

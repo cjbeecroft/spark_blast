@@ -6,11 +6,13 @@ from django.contrib.auth.models import User
 from models import Job
 from models import Query
 from models import Dataset
+from models import Database
 from models import Raw
 from serializers import JobSerializer
 from serializers import JobListSerializer
 from serializers import QuerySerializer
 from serializers import DatasetSerializer
+from serializers import DatabaseSerializer
 from serializers import RawSerializer
 from rest_framework import permissions
 from permissions import IsOwnerOrReadOnly
@@ -73,6 +75,14 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+
+    def perform_create(self, serializer):
+        serializer.save(creator=self.request.user)
+
+class DatabaseViewSet(viewsets.ModelViewSet):
+    queryset = Database.objects.all()
+    serializer_class = DatabaseSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
     def perform_create(self, serializer):

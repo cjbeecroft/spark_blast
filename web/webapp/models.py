@@ -30,7 +30,6 @@ class Job(models.Model):
     name = models.CharField(max_length=100, default='Default_Job_Name')
     query = models.ForeignKey(Query, null=True,related_name='jobs', on_delete=models.CASCADE )
     status = models.CharField(max_length=2, choices=STATUSES)
-    job_type = models.CharField(max_length=2, choices=JOB_TYPES, default="DB")
     yarn_id = models.CharField(max_length=100,null=True)
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True)
@@ -44,9 +43,21 @@ class Job(models.Model):
 
 class Dataset(models.Model):
     name = models.CharField(max_length=100, primary_key=True, null=False)
-    jobs = models.ManyToManyField(Job, null=True,related_name='datasets')
-    hdfs_dir = models.CharField(max_length=200, null=True, blank=True)
+    #jobs = models.ManyToManyField(Job, null=True,related_name='datasets')
     creator = models.ForeignKey('auth.User', related_name='datasets', on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __unicode__(self):
+        return '%s' % (self.name)
+
+    class Meta:
+        ordering = ['created']
+
+class Database(models.Model):
+    name = models.CharField(max_length=100, primary_key=True, null=False)
+    jobs = models.ManyToManyField(Job, related_name='databases')
+    datasets = models.ManyToManyField(Dataset, related_name='databases')
+    creator = models.ForeignKey('auth.User', related_name='databases', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
@@ -57,7 +68,8 @@ class Dataset(models.Model):
 
 class Raw(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    dataset = models.ForeignKey(Dataset, related_name="raw_data", on_delete=models.CASCADE, null=False)
+    dataset = models.ForeignKey(Dataset, related_name="raw_data", on_delete=models.CASCADE, null=True)
+    database = models.ForeignKey(Database, related_name="raw_data", on_delete=models.CASCADE, null=True)
     location = models.URLField(null=False, blank=False)
 
     def __unicode__(self):
