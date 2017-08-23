@@ -22,8 +22,17 @@ def maxByIndex(a, b, index):
     else:
         return b
 
+def setup():
+    ''' setup the spark context and get the logger '''
+    # Set the context
+    conf = SparkConf()
+    conf.setExecutorEnv(key='Auth', value='value', pairs=None)
+    sc = SparkContext(conf=conf)
+    logger = sc._jvm.org.apache.log4j.LogManager.getLogger(__name__)
+    return sc, logger
 
-def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES):
+
+def main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE, QUERY_FILE, MODE, OBJECT_STORES):
     ''' Main function
         ST_AUTH - Object storage auth string where fna containers are found
         ST_USER - Ojbect storage user token
@@ -35,10 +44,6 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
         MODE - operation mode, 1 = top search, 2 = most common genome
         OBJECT_STORES - list of source containers that built the blast db
     '''
-    # Set the context
-    conf = SparkConf()
-    conf.setExecutorEnv(key='Auth', value='value', pairs=None)
-    sc = SparkContext(conf=conf)
 
     # Quiet the logs
     sc.setLogLevel("WARN")
@@ -66,12 +71,12 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
 
     # Verify the container we need is present
     if container not in [t['name'] for t in conn.get_account()[1]]:
-        print("No database parition created for %s partition factor %d" % ("+".join(sorted(OBJECT_STORES)), TASKS))
+        logger.info("No database parition created for %s partition factor %d" % ("+".join(sorted(OBJECT_STORES)), TASKS))
         exit()
 
-    # Get the list of objects we are oing to need
+    # Get the list of objects we are going to need
     dbs = {}
-    print("Collecting DBs from " + container)
+    logger.info("Collecting DBs from " + container)
     for data in conn.get_container(container)[1]:
         base = data['name'].split('.', 1)[0]
         if base not in dbs:
@@ -127,44 +132,47 @@ def main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJEC
             print line
 
 
-def usage():
+def usage(logger):
     ''' Usage: print home help information '''
-    print("Usage: <fasta file to query> <search mode [1|2]> <object container[s] used to build blast databases>")
-    print("       search mode 1: find top hit for each line in file, or")
-    print("                   2: find top references|organisms referenced in query file\n")
-    print("Envionment variables:")
-    print("       ST_AUTH - Object store auth token URL")
-    print("       ST_USER - Object store user name of account on cluster")
-    print("       ST_KEY - Object store user password of account on cluster")
-    print("       TASKS_TO_USE - The number of workers to devote to the task/number of db partitions to use")
-    print("       CORES_TO_USE - The number of cores each worker should use")
-    print("       BLASTN - The name and location of the blastn program")
+    logger.warn("Usage: <fasta file to query> <search mode [1|2]> <object container[s] used to build blast databases>")
+    logger.warn("       search mode 1: find top hit for each line in file, or")
+    logger.warn("                   2: find top references|organisms referenced in query file\n")
+    logger.warn("Envionment variables:")
+    logger.warn("       ST_AUTH - Object store auth token URL")
+    logger.warn("       ST_USER - Object store user name of account on cluster")
+    logger.warn("       ST_KEY - Object store user password of account on cluster")
+    logger.warn("       TASKS_TO_USE - The number of workers to devote to the task/number of db partitions to use")
+    logger.warn("       CORES_TO_USE - The number of cores each worker should use")
+    logger.warn("       BLASTN - The name and location of the blastn program")
 
 
 if __name__ == '__main__':
+
+    sc, logger = setup()
 
     # Get our environment
     ST_AUTH = os.getenv('ST_AUTH')
     ST_USER = os.getenv('ST_USER')
     ST_KEY = os.getenv('ST_KEY')
+    LOCAL_FILE = os.getenv('COPY_FILE_TO_OBJECT_STORE', '0')
     TASKS = os.getenv('TASKS_TO_USE')
     CORES = os.getenv('CORES_TO_USE')
     BLASTN = os.getenv('BLASTN', './blastn')
 
     if ST_AUTH is None or ST_USER is None or ST_KEY is None or TASKS is None:
-        print("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
-        print("Please set these values object store before running\n")
-        usage()
+        logger.error("Environment does not contain ST_AUTH, ST_USER, ST_KEY, or TASKS_TO_USE")
+        logger.error("Please set these values object store before running\n")
+        usage(logger)
         exit()
 
     if not os.path.exists(BLASTN):
-        print("BLASTN env variable not set or blastn not in current directory")
+        logger.error("BLASTN env variable not set or blastn not in current directory")
         exit()
 
     try:
         TASKS = int(TASKS)
     except:
-        print("TASKS_TO_USE is not defined as an integer")
+        logger.error("TASKS_TO_USE is not defined as an integer")
         exit()
 
     if len(sys.argv) > 2:
@@ -176,12 +184,12 @@ if __name__ == '__main__':
             CORES = 1
 
         if MODE not in ('1', '2'):
-            print("search mode is not 1 or 2\n")
-            usage()
+            logger.error("search mode is not 1 or 2\n")
+            usage(logger)
 
         else:
             # Run
-            main(ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, QUERY_FILE, MODE, OBJECT_STORES)
+            main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE, QUERY_FILE, MODE, OBJECT_STORES)
 
     else:
-        usage()
+        usage(logger)

@@ -16,7 +16,13 @@ while read LINE; do
     Database=${array[2]}
     
     # Download the database files from the object store
-    time swift -q download $Container ${array[@]:3}
+    swift -q download $Container ${array[@]:3}
+
+    if [ $LOCAL_FILE != '0' ]; then
+        # Download the database files from the object store
+        # TODO need to address files larger that 5GB
+        swift -q download 'tmp' $QueryFile
+    fi
 
     # Run Blast, it will tell us a story about our genomic poems
 
@@ -29,7 +35,7 @@ while read LINE; do
     #      graves might rise up through the mounds and gaze on the tossing
     #      billows, and be refresh'd by storms, immensity, liberty, action.
     #         -- Walt Whitman - Leaves of Grass: Book 6, Salut au Monde, verse 7
-    time $BLASTN -db $Database $OPTIONS \
+    $BLASTN -db $Database $OPTIONS \
         -num_threads $THREADS \
         -outfmt "10 qseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle" \
         < $QueryFile
@@ -37,6 +43,12 @@ while read LINE; do
     # remove the downloaded DBs
     /bin/rm -rf ${array[@]:3}
 done
+
+# Remove the query file
+if [ $LOCAL_FILE != '0' ]; then
+    # TODO need to address files larger that 5GB
+    /bin/rm -rf $QueryFile
+fi
 
 # And we don't need blast if we've copied it, e.g., it is a local file
 if [ `dirname $BLASTN` == "." ] ; then

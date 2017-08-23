@@ -55,7 +55,7 @@ def main(ST_AUTH, ST_USER, ST_KEY, MAX_FILE_SIZE, TASKS, MAKEBLASTDB, OBJECT_STO
         for data in conn.get_container(db_container)[1]:
             conn.delete_object(db_container, data['name'])
 
-    # Get the list of objects we are going to need,
+    # Get the list of objects we are going to need
     files = []
     for fna_container in OBJECT_STORES:
         # Check to see if the fna_container exists, if not exit
