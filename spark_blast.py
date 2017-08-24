@@ -1,5 +1,7 @@
 import os
 import sys
+# import logging
+import random
 from pyspark import SparkContext, SparkConf
 import swiftclient
 
@@ -47,14 +49,13 @@ def main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE,
 
     # Quiet the logs
     sc.setLogLevel("WARN")
-    
-    N = 5 # number of top results to take
+
+    # N = 5 # number of top results to take
 
     # Set our spark database creation script and add all the files that are needed to be on the
     # remote hosts to the shall script
     ShellScript = "spark_blast.bash"
     sc.addFile(ShellScript)
-    sc.addFile(QUERY_FILE)
 
     # Copy over blastn if it is local
     if os.path.dirname(BLASTN) == "." or os.path.dirname(BLASTN) == "":
@@ -68,6 +69,32 @@ def main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE,
 
     # log into swift
     conn = swiftclient.Connection(user=ST_USER, key=ST_KEY, authurl=ST_AUTH)
+
+    # Change LOCAL_FILE to true if our query file appears to be local
+    if os.path.dirname(QUERY_FILE) == "." or os.path.dirname(QUERY_FILE) == "":
+        LOCAL_FILE = "1"
+
+
+    # Take care of the query file
+    if LOCAL_FILE == '1':
+        # put it in the object store
+        # create a tmp container if it isn't there
+        if 'tmp' not in [t['name'] for t in conn.get_account()[1]]:
+            conn.put_container('tmp')
+            # TODO need to verify that container was created
+
+        # Name it something random, so if multiple runs are going we don't step on each other
+        random.seed()
+        Query_File = "query_" + str(random.randint(10000,99999)) + ".fasta"
+        # write it out to the object store
+        # TODO need to handle files larger than the object store maximum
+        #      Thought here is to overload the LOCAL_FILE var to communicate the number of pieces
+        #      (0 = not local, != 0 = in data store and in LOCAL_FILE pieces)
+        with open(QUERY_FILE, 'r') as local:
+            conn.put_object('tmp', Query_File, contents=local, content_type='text/plain')
+    else:
+        # if it is not a local file, just pass the name along
+        Query_File = QUERY_FILE
 
     # Verify the container we need is present
     if container not in [t['name'] for t in conn.get_account()[1]]:
@@ -93,17 +120,17 @@ def main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE,
 
     options = ""
 
-    # TODO -- these didn't work when I used them, so I commented them out for now - Peter
     # Set our search options
-    # if MODE == "1":
-    #    options = "-max_target_seqs 1"
+    if MODE == "1":
+        options = "-max_target_seqs 1"
     # elif MODE == "2":
     #     options = ??
 
     # Pass our bash script our parameters, ideally we would like to pass the executor ID/Task ID, but
     # this doesn't appear to be available in ver 2.1.1
     pipeRDD = distData.pipe(ShellScript, {'ST_AUTH': ST_AUTH, 'ST_USER': ST_USER, 'ST_KEY': ST_KEY,
-                                          'THREADS': str(CORES), 'OPTIONS': options, 'BLASTN': BLASTN})
+                                          'THREADS': str(CORES), 'OPTIONS': options, 'BLASTN': BLASTN,
+                                          'LOCAL_FILE': LOCAL_FILE})
 
     # Now let the bash script do its work.  This will run blast using our query file across all the
     # DB partitions searching for matching genomic reads.
@@ -112,7 +139,7 @@ def main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE,
     # Missing me one place search another,
     # I stop somewhere waiting for you.
     #   -- Walt Whitman - Leaves of Grass: Book 3, Song of Myself, Verse 52
-    print("Search through all the DBs for matching sequence")
+    logger.info("Search through all the DBs for matching sequence")
     if MODE == "1":
         query_count  = pipeRDD.map(lambda x : (x.split(',')[0], (x.split(',')[2], x.split('|')[-1:][0]) )) \
             .reduceByKey( lambda x, y : maxByIndex(x, y, 0)) \
@@ -130,6 +157,11 @@ def main(sc, logger, ST_AUTH, ST_USER, ST_KEY, TASKS, CORES, BLASTN, LOCAL_FILE,
             .map(lambda x:(str(x[0]) + ", " + str(x[1])))
         for line in specie_count.collect():
             print line
+
+    # We are done, remove our uploaded file
+    if LOCAL_FILE == '1':
+        # TODO if there are multiple pieces, we need to address cleaning up
+        conn.delete_object('tmp', Query_File)
 
 
 def usage(logger):

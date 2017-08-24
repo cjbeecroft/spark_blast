@@ -18,6 +18,11 @@ export ST_USER="SLO..."
 export ST_KEY="748..."
 export ST_AUTH="https://sjc01.objectstorage.service.networklayer.com/auth/v1.0"
 
+# Specify if the query file is to be transferred via the object store (1)
+# otherwise (value 0 or unset) it is assumed that the file is visible to
+# all of the workers (via a shared file system or pre-copied to each node)
+export COPY_FILE_TO_OBJECT_STORE=1
+
 
 ######################################################################
 #                       _           _           _
