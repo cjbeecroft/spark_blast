@@ -18,7 +18,7 @@ while read LINE; do
     # Download the database files from the object store
     swift -q download $Container ${array[@]:3}
 
-    if [ $LOCAL_FILE != '0' ]; then
+    if [ "x$LOCAL_FILE" != 'x0' ]; then
         # Download the database files from the object store
         # TODO need to address files larger that 5GB
         swift -q download 'tmp' $QueryFile
