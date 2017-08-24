@@ -80,7 +80,9 @@ For example,
 ```
 
 
-This invokes `spark_blastdb.py`, which in turn invokes `spark_blastdb.bash` across the worker nodes and will create a blastdb using the contents of &lt;collection_name> [...].  The source database collection(s) should only contain gzipped fna files that will be used to build the blastdbs.   The process will end up creating a new container by the name of `blastdb_<partitions>_<list_of_source_containers>`
+This invokes `spark_blastdb.py`, which in turn invokes `spark_blastdb.bash` across the worker nodes and will create a blastdb using the contents of &lt;collection_name> [...].  The source database collection(s) should only contain gzipped fna files that will be used to build the blastdbs.   The process will end up creating a new container by the name of `blastdb_<partitions>_<list_of_source_containers>`.
+
+Note that source fna files are randomly shuffled when distributing to the worker nodes.  This is done in an attempt to remove any clustering that may be present in the object store and an attempt to level out the database sizes between partitions.  If a container contains few large fna files, this will have minimal impact.  Also if databases are recreated, the resulting partition will be different due to the random shuffling.
 
 ## Step 2 -- Querying the db
 
