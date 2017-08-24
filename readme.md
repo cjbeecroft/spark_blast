@@ -84,6 +84,8 @@ This invokes `spark_blastdb.py`, which in turn invokes `spark_blastdb.bash` acro
 
 Note that source fna files are randomly shuffled when distributing to the worker nodes.  This is done in an attempt to remove any clustering that may be present in the object store and an attempt to level out the database sizes between partitions.  If a container contains few large fna files, this will have minimal impact.  Also if databases are recreated, the resulting partition will be different due to the random shuffling.
 
+The spark_blastdb.bash wrapper streams the fna files out of the object store to makeblastdb.   At the end of processing, the wrapper will upload the files to the passed container and then will remove the local files.
+
 ## Step 2 -- Querying the db
 
 ```
@@ -101,3 +103,11 @@ Mode currently supports two modes, mode 1, which returns the top 1 hit, and mode
 If the &lt;query_file> is local to the invocation directory, the file will be transmitted to the worker nodes via the object store regardless of the setting of the COPY_FILE_TO_OBJECT_STORE environment variable.
 
 Compressed files are not currently supported.  Files transmitted via the object store currently have a size limit (5GB).  Allowing for compressed and larger files is slated for a future enhancement.
+
+The spark_blast.bash wrapper downloads all the blastdb database files and the query file if it was loaded into the object store.  At the end of processing, these files are removed from the Spark working directory.   At the end of processing, spark_blast.py will remove the uploaded query file if it was uploaded.
+
+## Caveats
+
+Currently minimal error checking is done in the code.  While Spark should recognize failed jobs and reschedule them, this may leave downloaded files in the Spark work directories.  Both bash wrappers will cleanup the downloaded files at the end of the tasks and spark_blast.py will remove the uploaded query file (if uploaded).  If there are any failures, these cleanup tasks may not be done.
+
+The wrappers do not check if there is enough disk space for downloading and processing data.
